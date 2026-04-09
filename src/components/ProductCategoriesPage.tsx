@@ -1,4 +1,4 @@
-import { Search, Coffee, Sandwich, Cookie, Zap, MoreHorizontal, SlidersHorizontal, X, Award } from 'lucide-react';
+import { Search, Coffee, Sandwich, Cookie, Zap, MoreHorizontal, X, Award, Heart } from 'lucide-react';
 import { Product } from '../types';
 import { useState } from 'react';
 
@@ -6,12 +6,14 @@ export default function ProductCategoriesPage({
   products,
   selectedCategory,
   onSelectCategory, 
-  onSelectProduct 
+  onSelectProduct,
+  toggleFavorite
 }: { 
   products: Product[],
   selectedCategory: string,
   onSelectCategory: (category: string) => void,
-  onSelectProduct: (product: Product) => void
+  onSelectProduct: (product: Product) => void,
+  toggleFavorite: (productId: string) => void
 }) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -83,21 +85,32 @@ export default function ProductCategoriesPage({
         {filteredProducts.map((product) => {
           const isUnavailable = product.status === 'unavailable';
           return (
-            <button 
+            <div 
               key={product.id}
-              onClick={() => !isUnavailable && onSelectProduct(product)}
-              className={`bg-white p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow text-left ${isUnavailable ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={isUnavailable}
+              className={`bg-white p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow text-left relative ${isUnavailable ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <div className="relative">
-                <img src={product.imageUrl} alt={product.name} className="w-full aspect-square object-cover rounded-xl mb-3" referrerPolicy="no-referrer" />
-                {product.isNew && <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">NEW</div>}
-                {product.isBestSeller && <div className="absolute top-2 right-2 bg-yellow-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">BEST SELLER</div>}
-              </div>
-              <h3 className="font-bold text-primary text-center">{product.name}</h3>
-              <p className="text-on-surface-variant text-[10px] text-center">{product.description} {isUnavailable && '(Not Available)'}</p>
-              <p className="font-bold text-primary mt-2 text-center">₱{product.variants[0]?.price.toFixed(2)}</p>
-            </button>
+              <button 
+                onClick={() => !isUnavailable && onSelectProduct(product)}
+                className="w-full"
+                disabled={isUnavailable}
+              >
+                <div className="relative">
+                  <img src={product.imageUrl} alt={product.name} className="w-full aspect-square object-cover rounded-xl mb-3" referrerPolicy="no-referrer" />
+                  {isUnavailable && <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center text-white font-bold">Out of Stock</div>}
+                  {product.isNew && !product.isBestSeller && !isUnavailable && <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">NEW</div>}
+                  {product.isBestSeller && !isUnavailable && <div className="absolute top-2 left-2 bg-yellow-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">BEST SELLER</div>}
+                  <div 
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+                    className="absolute top-2 right-2 p-1 rounded-full cursor-pointer"
+                  >
+                    <Heart size={16} className={product.isFavorite ? 'fill-red-500 text-red-500' : 'text-white'} />
+                  </div>
+                </div>
+                <h3 className="font-bold text-primary text-center">{product.name}</h3>
+                <p className="text-on-surface-variant text-[10px] text-center">{product.description}</p>
+                <p className="font-bold text-primary mt-2 text-center">₱{product.variants[0]?.price.toFixed(2)}</p>
+              </button>
+            </div>
           );
         })}
       </div>

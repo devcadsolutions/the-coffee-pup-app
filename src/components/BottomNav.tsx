@@ -1,12 +1,12 @@
 import { motion } from 'motion/react';
-import { Home, ReceiptText, Settings, Coffee } from 'lucide-react';
+import { Home, Coffee, Users, User } from 'lucide-react';
 
 export default function BottomNav({ activePage, setPage }: { activePage: string, setPage: (page: string) => void }) {
   const navItems = [
     { name: 'Home', icon: Home, id: 'home', animation: { rotate: [0, 20, -20, 0] } },
     { name: 'Menu', icon: Coffee, id: 'menu', animation: { y: [0, -5, 0] } },
-    { name: 'Orders', icon: ReceiptText, id: 'orders', animation: { scale: [1, 1.1, 1] } },
-    { name: 'Settings', icon: Settings, id: 'settings', animation: { rotate: 360 } },
+    { name: 'Community', icon: Users, id: 'community', animation: { scale: [1, 1.1, 1] } },
+    { name: 'Account', icon: User, id: 'account', animation: { scale: [1, 1.1, 1] } },
   ];
 
   return (

@@ -1,31 +1,87 @@
-import React, { useState } from 'react';
-import { ArrowLeft, MapPin, Truck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, MapPin, Truck, Loader2 } from 'lucide-react';
 import { CheckoutDetails } from '../types';
+import { db, doc, getDoc, collection, getDocs, query, where } from '../lib/firebase';
 
 export default function CheckoutPage({ 
   onConfirm, 
   onCancel,
-  total
+  total,
+  user
 }: { 
   onConfirm: (details: CheckoutDetails) => void, 
   onCancel: () => void,
-  total: number
+  total: number,
+  user?: any
 }) {
-  const [deliveryType, setDeliveryType] = useState<'pickup' | 'outside' | null>(null);
+  const [deliveryType, setDeliveryType] = useState<'pickup' | 'outside' | 'chateau' | null>(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    name: user?.displayName || '',
     deliveryMethod: 'Any' as 'Lalamove' | 'Grab' | 'MoveIt' | 'Any',
     pickupLocation: 'Uncle John\'s' as 'Uncle John\'s' | 'Eiffel Cluster Lobby' | 'Clubhouse',
+    chateauCluster: 'Seine' as string,
+    chateauBuilding: '' as 'A' | 'B' | 'C' | 'D',
+    chateauUnit: '',
     contactNumber: '',
     notes: '',
-    paymentMethod: 'gcash' as 'gcash' | 'maya'
+    paymentMethod: 'gcash' as 'gcash' | 'maya',
+    deliveryFee: 0
   });
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      deliveryFee: deliveryType === 'outside' ? 50 : 0
+    }));
+  }, [deliveryType]);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          setFormData(prev => ({
+            ...prev,
+            name: userData.name || prev.name,
+            contactNumber: userData.phoneNumber || prev.contactNumber
+          }));
+        }
+
+        // Fetch default address
+        const addressesRef = collection(db, 'users', user.uid, 'addresses');
+        const q = query(addressesRef, where('isDefault', '==', true));
+        const addressSnap = await getDocs(q);
+        if (!addressSnap.empty) {
+          const defaultAddr = addressSnap.docs[0].data();
+          if (defaultAddr.label.toLowerCase().includes('chateau')) {
+            setDeliveryType('chateau');
+            setFormData(prev => ({ ...prev, notes: `Default Address: ${defaultAddr.address}` }));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user data for checkout:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
+
+  const clusters = ['Concorde', 'La Fayette', 'Eiffel', 'Seine', 'Vendome', 'Ritz'];
+  const buildings = ['A', 'B', 'C', 'D'];
 
   const isFormValid = () => {
     if (!deliveryType) return false;
     if (!formData.name || !formData.contactNumber) return false;
     if (deliveryType === 'outside' && !formData.deliveryMethod) return false;
     if (deliveryType === 'pickup' && !formData.pickupLocation) return false;
+    if (deliveryType === 'chateau' && (!formData.chateauCluster || !formData.chateauBuilding || !formData.chateauUnit)) return false;
     return true;
   };
 
@@ -46,6 +102,7 @@ export default function CheckoutPage({
           <ArrowLeft size={20} />
         </button>
         <h2 className="font-serif text-3xl font-bold text-primary">Checkout</h2>
+        {loading && <Loader2 className="text-primary animate-spin ml-auto" size={20} />}
       </div>
 
       {!deliveryType ? (
@@ -62,6 +119,19 @@ export default function CheckoutPage({
               <div>
                 <h3 className="font-bold text-primary">Pick-up</h3>
                 <p className="text-xs text-on-surface-variant">Collect your order at a designated spot</p>
+              </div>
+            </button>
+
+            <button 
+              onClick={() => setDeliveryType('chateau')}
+              className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center gap-4 text-left border-2 border-transparent hover:border-primary"
+            >
+              <div className="p-3 rounded-full bg-primary/10 text-primary">
+                <MapPin size={24} />
+              </div>
+              <div>
+                <h3 className="font-bold text-primary">Chateau Elysee Delivery</h3>
+                <p className="text-xs text-on-surface-variant">Free delivery for residents!</p>
               </div>
             </button>
 
@@ -110,6 +180,29 @@ export default function CheckoutPage({
                     {['Lalamove', 'Grab', 'MoveIt', 'Any'].map(m => (
                       <button key={m} type="button" onClick={() => setFormData({...formData, deliveryMethod: m as any})} className={`py-2 rounded-lg font-bold text-xs ${formData.deliveryMethod === m ? 'bg-primary text-white' : 'bg-surface'}`}>{m}</button>
                     ))}
+                  </div>
+                </div>
+              ) : deliveryType === 'chateau' ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Cluster</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {clusters.map(c => (
+                        <button key={c} type="button" onClick={() => setFormData({...formData, chateauCluster: c})} className={`py-2 rounded-lg font-bold text-[10px] ${formData.chateauCluster === c ? 'bg-primary text-white' : 'bg-surface'}`}>{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Building</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {buildings.map(b => (
+                        <button key={b} type="button" onClick={() => setFormData({...formData, chateauBuilding: b as any})} className={`py-2 rounded-lg font-bold text-[10px] ${formData.chateauBuilding === b ? 'bg-primary text-white' : 'bg-surface'}`}>{b}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Unit Number</label>
+                    <input required type="text" value={formData.chateauUnit} onChange={e => setFormData({...formData, chateauUnit: e.target.value})} placeholder="e.g. 101" className="w-full px-4 py-3 rounded-xl bg-surface border border-gray-100 focus:outline-none focus:ring-2 focus:ring-primary" />
                   </div>
                 </div>
               ) : (

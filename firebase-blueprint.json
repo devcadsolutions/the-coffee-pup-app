@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "nickname": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "favorites": { "type": "array", "items": { "type": "string" } },
+        "cart": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": ["uid", "name", "email"]
+    },
+    "Address": {
+      "title": "Address",
+      "description": "User delivery address",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "label": { "type": "string" },
+        "address": { "type": "string" },
+        "isDefault": { "type": "boolean" }
+      },
+      "required": ["uid", "label", "address"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "An order placed by a customer.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "type": { "type": "string", "enum": ["pickup", "outside", "chateau"] },
+        "items": { "type": "array", "items": { "type": "object" } },
+        "subtotal": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "total": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["gcash", "maya"] },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid"] },
+        "status": { "type": "string", "enum": ["Pending", "Confirmed", "Preparing", "Ready for Pickup", "Out for Delivery", "Completed", "Cancelled"] },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "orderNumber", "customerName", "phoneNumber", "items", "total", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "User profiles"
+    },
+    "/users/{uid}/addresses/{addressId}": {
+      "schema": { "$ref": "Address" },
+      "description": "User addresses"
+    },
+    "/users/{uid}/orders/{orderId}": {
+      "schema": { "$ref": "Order" },
+      "description": "User orders"
+    }
+  }
+}

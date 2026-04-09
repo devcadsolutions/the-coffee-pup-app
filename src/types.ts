@@ -22,6 +22,7 @@ export interface Product {
   modifierGroups?: ModifierGroup[];
   isNew?: boolean;
   isBestSeller?: boolean;
+  isFavorite?: boolean;
   tags?: string[];
   status?: 'active' | 'unavailable' | 'hidden';
 }
@@ -38,11 +39,15 @@ export interface CartItem {
 }
 
 export interface CheckoutDetails {
-  type: 'pickup' | 'outside';
+  type: 'pickup' | 'outside' | 'chateau';
   deliveryMethod?: 'Lalamove' | 'Grab' | 'MoveIt' | 'Any';
   pickupLocation?: 'Uncle John\'s' | 'Eiffel Cluster Lobby' | 'Clubhouse';
+  chateauCluster?: string;
+  chateauBuilding?: 'A' | 'B' | 'C' | 'D';
+  chateauUnit?: string;
   name: string;
   contactNumber: string;
   notes?: string;
   paymentMethod: 'gcash' | 'maya';
+  deliveryFee: number;
 }

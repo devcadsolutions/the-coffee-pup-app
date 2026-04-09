@@ -1,0 +1,150 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - name: string (required, max 50 chars)
+    //   - nickname: string (optional, max 50 chars)
+    //   - email: string (required, email format)
+    //   - photoURL: string (optional, URL format)
+    //
+    // Collection: users/{uid}/addresses
+    // Document ID: {addressId}
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - label: string (required, max 20 chars)
+    //   - address: string (required, max 200 chars)
+    //   - isDefault: boolean (required)
+    //
+    // Collection: users/{uid}/orders
+    // Document ID: {orderId}
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - date: string (required, ISO 8601 format)
+    //   - items: string (required, max 500 chars)
+    //   - total: number (required, positive)
+    //   - status: string (required, enum: ['Delivered', 'Pending', 'Cancelled'])
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function isPositive(field) {
+      return request.resource.data[field] is number && request.resource.data[field] > 0;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isValidUserProfile(data) {
+      return hasOnlyAllowedFields(['uid', 'name', 'nickname', 'email', 'photoURL', 'favorites', 'cart', 'phoneNumber', 'role']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 50 &&
+             (!('nickname' in data) || (data.nickname is string && data.nickname.size() < 50)) &&
+             data.email is string && isValidEmail(data.email) &&
+             (!('photoURL' in data) || isValidUrl(data.photoURL)) &&
+             (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() < 20)) &&
+             (!('role' in data) || data.role in ['user', 'admin']) &&
+             (!('favorites' in data) || data.favorites is list) &&
+             (!('cart' in data) || data.cart is list);
+    }
+
+    function isValidAddress(data) {
+      return hasOnlyAllowedFields(['uid', 'label', 'address', 'isDefault']) &&
+             data.label is string && data.label.size() > 0 && data.label.size() < 20 &&
+             data.address is string && data.address.size() > 0 && data.address.size() < 200 &&
+             data.isDefault is bool;
+    }
+
+    function isValidOrder(data) {
+      return hasOnlyAllowedFields(['uid', 'orderNumber', 'customerName', 'phoneNumber', 'address', 'type', 'items', 'subtotal', 'deliveryFee', 'total', 'paymentMethod', 'paymentStatus', 'status', 'notes', 'createdAt', 'updatedAt']) &&
+             data.uid is string &&
+             data.orderNumber is string &&
+             data.customerName is string &&
+             data.phoneNumber is string &&
+             data.address is string &&
+             data.type in ['pickup', 'outside', 'chateau'] &&
+             data.items is list &&
+             isPositive('subtotal') &&
+             isPositive('deliveryFee') &&
+             isPositive('total') &&
+             data.paymentMethod in ['gcash', 'maya'] &&
+             data.paymentStatus in ['pending', 'paid'] &&
+             data.status in ['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Out for Delivery', 'Completed', 'Cancelled'] &&
+             (!('notes' in data) || data.notes is string) &&
+             data.createdAt is string &&
+             data.updatedAt is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data) && uidUnchanged();
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUserProfile(request.resource.data) && uidNotModified();
+
+      match /addresses/{addressId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidAddress(request.resource.data) && uidUnchanged();
+        allow update: if (isOwner(userId) || isAdmin()) && isValidAddress(request.resource.data) && uidNotModified();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /orders/{orderId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidOrder(request.resource.data) && uidUnchanged();
+        allow update: if (isOwner(userId) || isAdmin()) && isValidOrder(request.resource.data) && uidNotModified();
+      }
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}

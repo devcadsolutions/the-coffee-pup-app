@@ -2,7 +2,7 @@ import { Product, ModifierGroup } from '../types';
 
 const getImage = (name: string) => new URL(`../assets/images/${name}`, import.meta.url).href;
 
-const COFFEE_ADDONS: ModifierGroup = {
+export const COFFEE_ADDONS: ModifierGroup = {
   id: 'modgrp_coffee_addons',
   name: 'Coffee Add-ons',
   options: [
@@ -24,7 +24,7 @@ const COFFEE_ADDONS: ModifierGroup = {
   ]
 };
 
-const COFFEE_SYRUP: ModifierGroup = {
+export const COFFEE_SYRUP: ModifierGroup = {
   id: 'modgrp_coffee_syrup',
   name: 'Coffee Syrup',
   options: [
@@ -37,7 +37,7 @@ const COFFEE_SYRUP: ModifierGroup = {
   ]
 };
 
-const DRIZZLE: ModifierGroup = {
+export const DRIZZLE: ModifierGroup = {
   id: 'modgrp_drizzle',
   name: 'Drizzle',
   options: [
@@ -47,7 +47,7 @@ const DRIZZLE: ModifierGroup = {
   ]
 };
 
-const TOAST_ADDONS: ModifierGroup = {
+export const TOAST_ADDONS: ModifierGroup = {
   id: 'modgrp_toast_addons',
   name: 'Toast Add-ons',
   options: [
@@ -58,7 +58,7 @@ const TOAST_ADDONS: ModifierGroup = {
   ]
 };
 
-const FRENCH_TOAST_ADDONS: ModifierGroup = {
+export const FRENCH_TOAST_ADDONS: ModifierGroup = {
   id: 'modgrp_french_toast_addons',
   name: 'French Toast Add-ons',
   options: [
@@ -83,6 +83,8 @@ export const products: Product[] = [
     description: 'Coffee - the classic way',
     category: 'Coffee',
     imageUrl: getImage('Americano.jpg'),
+    isBestSeller: true,
+    isNew: true,
     variants: [
       { name: 'Iced', price: 95 },
       { name: 'Hot', price: 90 },
@@ -97,6 +99,8 @@ export const products: Product[] = [
     description: 'The classic, enticing fusion of espresso and rich milk',
     category: 'Coffee',
     imageUrl: getImage('Cafe Latte.jpg'),
+    isBestSeller: true,
+    isNew: true,
     variants: [
       { name: 'Iced', price: 100 },
       { name: 'Hot', price: 95 },
@@ -111,6 +115,8 @@ export const products: Product[] = [
     description: 'Espresso and creamy milk drizzled with caramel sweetness',
     category: 'Coffee',
     imageUrl: getImage('Caramel Macchiato.jpg'),
+    isBestSeller: true,
+    isNew: true,
     variants: [
       { name: 'Iced', price: 105 },
       { name: 'Hot', price: 100 },
@@ -125,6 +131,8 @@ export const products: Product[] = [
     description: 'The perfect harmony of coffee and luxurious French vanilla',
     category: 'Coffee',
     imageUrl: getImage('French Vanilla.jpg'),
+    isBestSeller: true,
+    isNew: true,
     variants: [
       { name: 'Iced', price: 105 },
       { name: 'Hot', price: 100 },
@@ -139,6 +147,8 @@ export const products: Product[] = [
     description: 'A symphony of bold espresso and sumptuous condensed milk',
     category: 'Coffee',
     imageUrl: getImage('Spanish Latte.jpg'),
+    isBestSeller: true,
+    isNew: true,
     variants: [
       { name: 'Iced', price: 110 },
       { name: 'Hot', price: 105 },
@@ -153,6 +163,8 @@ export const products: Product[] = [
     description: 'Savor the irresistible blend of creamy sweetness and hazelnut',
     category: 'Coffee',
     imageUrl: getImage('Hazelnut Latte.jpg'),
+    isBestSeller: true,
+    isNew: true,
     variants: [
       { name: 'Iced', price: 105 },
       { name: 'Hot', price: 100 },
