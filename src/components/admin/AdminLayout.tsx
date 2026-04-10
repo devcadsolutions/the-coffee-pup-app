@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ShoppingBag, Coffee, Settings, BarChart, Menu as MenuIcon } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Coffee, Settings, BarChart, LogOut } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -14,41 +14,64 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <div className="flex min-h-screen bg-surface">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 bg-white border-r border-surface-container-low p-6 flex-col">
-        <h1 className="font-serif text-2xl font-bold text-primary mb-8">Admin Panel</h1>
-        <nav className="space-y-2">
+    <div className="flex flex-col min-h-screen bg-surface">
+      {/* Top Ribbon */}
+      <header className="w-full bg-primary text-white flex items-center justify-center px-6 h-16 shadow-md z-50">
+        <h1 className="font-serif font-bold text-xl">The Coffee Pup Admin</h1>
+      </header>
+
+      <div className="flex flex-1">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex w-64 bg-white border-r border-surface-container-low p-6 flex-col">
+          <nav className="space-y-2 flex-1">
+            {menuItems.map(item => (
+              <Link 
+                key={item.path} 
+                to={item.path} 
+                className={`flex items-center gap-3 p-3 rounded-xl font-bold ${location.pathname === item.path ? 'bg-primary text-white' : 'text-primary hover:bg-surface'}`}
+              >
+                <item.icon size={20} />
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+          
+          <div className="pt-6 border-t border-surface-container-low">
+            <Link 
+              to="/" 
+              className="flex items-center gap-3 p-3 rounded-xl font-bold text-primary hover:bg-surface"
+            >
+              <LogOut size={20} />
+              Return to App
+            </Link>
+          </div>
+        </aside>
+
+        {/* Mobile Bottom Nav */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-surface-container-low p-2 flex justify-around z-50">
           {menuItems.map(item => (
             <Link 
               key={item.path} 
               to={item.path} 
-              className={`flex items-center gap-3 p-3 rounded-xl font-bold ${location.pathname === item.path ? 'bg-primary text-white' : 'text-primary hover:bg-surface'}`}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg ${location.pathname === item.path ? 'text-primary' : 'text-on-surface-variant'}`}
             >
-              <item.icon size={20} />
-              {item.name}
+              <item.icon size={24} />
+              <span className="text-[10px] font-medium">{item.name}</span>
             </Link>
           ))}
-        </nav>
-      </aside>
-
-      {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-surface-container-low p-2 flex justify-around z-50">
-        {menuItems.map(item => (
           <Link 
-            key={item.path} 
-            to={item.path} 
-            className={`flex flex-col items-center gap-1 p-2 rounded-lg ${location.pathname === item.path ? 'text-primary' : 'text-on-surface-variant'}`}
+            to="/" 
+            className="flex flex-col items-center gap-1 p-2 rounded-lg text-on-surface-variant"
           >
-            <item.icon size={24} />
-            <span className="text-[10px] font-medium">{item.name}</span>
+            <LogOut size={24} />
+            <span className="text-[10px] font-medium">Exit</span>
           </Link>
-        ))}
-      </nav>
+        </nav>
 
-      <main className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
-        {children}
-      </main>
+        <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

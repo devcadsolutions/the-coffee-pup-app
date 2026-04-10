@@ -26,6 +26,7 @@ export default function SettingsPage() {
       <Link to="/admin" className="w-full py-4 rounded-full border border-primary text-primary font-bold text-sm uppercase tracking-widest text-center block">Admin Panel</Link>
 
       <button className="w-full py-4 rounded-full border border-error/20 text-error font-bold text-sm uppercase tracking-widest">Sign Out</button>
+      <p className="text-center text-xs text-on-surface-variant pt-2">Version 1.0.0 beta</p>
     </div>
   );
 }

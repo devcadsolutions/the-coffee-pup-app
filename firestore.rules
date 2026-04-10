@@ -143,8 +143,13 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow read: if isAdmin();
-      allow write: if isAdmin();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      allow create: if isValidOrder(request.resource.data) && 
+                    (
+                      (!isAuthenticated() && request.resource.data.uid == 'guest') || 
+                      (isAuthenticated() && request.resource.data.uid == request.auth.uid)
+                    );
+      allow update, delete: if isAdmin();
     }
   }
 }

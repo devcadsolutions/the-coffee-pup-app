@@ -30,6 +30,8 @@ export interface Product {
 export interface CartItem {
   id: string;
   productId: string;
+  name?: string;
+  price?: number;
   quantity: number;
   customizations: {
     variantName: string;

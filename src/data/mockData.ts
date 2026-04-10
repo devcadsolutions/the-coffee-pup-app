@@ -21,6 +21,9 @@ export const COFFEE_ADDONS: ModifierGroup = {
     { id: 'mod_ube_syrup', name: 'Ube Syrup', price: 40 },
     { id: 'mod_white_chocolate_syrup', name: 'White Chocolate Syrup', price: 35 },
     { id: 'mod_broas', name: 'Broas', price: 35 },
+    { id: 'mod_caramel_sauce', name: 'Caramel Sauce', price: 25 },
+    { id: 'mod_chocolate_sauce', name: 'Chocolate Sauce', price: 25 },
+    { id: 'mod_whipped_cream_coffee', name: 'Whipped Cream', price: 40 },
   ]
 };
 
@@ -34,6 +37,9 @@ export const COFFEE_SYRUP: ModifierGroup = {
     { id: 'mod_salted_caramel_syrup', name: 'Salted Caramel Syrup', price: 30 },
     { id: 'mod_hazelnut_syrup', name: 'Hazelnut Syrup', price: 30 },
     { id: 'mod_pumpkin_spice_syrup', name: 'Pumpkin Spice Syrup', price: 30 },
+    { id: 'mod_white_chocolate_syrup_m', name: 'White Chocolate Syrup', price: 30 },
+    { id: 'mod_dark_chocolate_syrup', name: 'Dark Chocolate Syrup', price: 30 },
+    { id: 'mod_peppermint_syrup', name: 'Peppermint Syrup', price: 30 },
   ]
 };
 
@@ -44,6 +50,8 @@ export const DRIZZLE: ModifierGroup = {
     { id: 'mod_caramel_drizzle', name: 'Caramel Drizzle', price: 30 },
     { id: 'mod_salted_caramel_drizzle', name: 'Salted Caramel Drizzle', price: 30 },
     { id: 'mod_chocolate_fudge_drizzle', name: 'Chocolate Fudge Drizzle', price: 30 },
+    { id: 'mod_strawberry_drizzle', name: 'Strawberry Drizzle', price: 30 },
+    { id: 'mod_white_chocolate_drizzle', name: 'White Chocolate Drizzle', price: 30 },
   ]
 };
 

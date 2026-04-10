@@ -22,9 +22,10 @@ import Settings from './components/admin/Settings';
 import Dashboard from './components/admin/Dashboard';
 import { Product, CartItem, CheckoutDetails } from './types';
 import { products as initialProducts } from './data/mockData';
-import { QrCode, Download, ShoppingCart, Settings, Loader2 } from 'lucide-react';
+import { QrCode, Download, ShoppingCart, Settings as SettingsIcon, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import AnnouncementModal from './components/AnnouncementModal';
+import UserOrdersPage from './components/UserOrdersPage';
 import { auth, onAuthStateChanged, db, doc, onSnapshot, updateDoc, setDoc } from './lib/firebase';
 
 export default function App() {
@@ -34,7 +35,8 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [orderConfirmed, setOrderConfirmed] = useState<CheckoutDetails & { total: number } | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [orderConfirmed, setOrderConfirmed] = useState<CheckoutDetails & { total: number, items: CartItem[], orderId: string, createdAt: string } | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [menuProducts, setMenuProducts] = useState<Product[]>(initialProducts);
   const [showQr, setShowQr] = useState(false);
@@ -169,6 +171,7 @@ export default function App() {
   };
 
   const handleConfirmOrder = async (details: CheckoutDetails) => {
+    setIsConfirming(true);
     const total = calculateTotal() + details.deliveryFee;
     const subtotal = calculateTotal();
     const orderId = `order_${Date.now()}`;
@@ -184,8 +187,10 @@ export default function App() {
         : details.pickupLocation || 'N/A',
       type: details.type,
       items: cart.map(item => ({
+        name: menuProducts.find(p => p.id === item.productId)?.name || 'Unknown',
         productId: item.productId,
         quantity: item.quantity,
+        price: (menuProducts.find(p => p.id === item.productId)?.variants.find(v => v.name === item.customizations.variantName)?.price || 0) + item.customizations.selectedModifiers.reduce((s, m) => s + m.option.price, 0),
         customizations: item.customizations
       })),
       subtotal,
@@ -199,8 +204,6 @@ export default function App() {
       updatedAt: now
     };
 
-    setOrderConfirmed({ ...details, total, items: cart });
-    
     // Save order to Firestore
     try {
       const orderRef = doc(db, 'orders', orderId);
@@ -209,8 +212,13 @@ export default function App() {
       console.error('Error saving order:', err);
     }
 
-    setCart([]);
-    setIsCheckingOut(false);
+    // Simulate transition
+    setTimeout(() => {
+      setOrderConfirmed({ ...details, total, items: cart, orderId, createdAt: now });
+      setCart([]);
+      setIsCheckingOut(false);
+      setIsConfirming(false);
+    }, 3000);
   };
 
   useEffect(() => {
@@ -240,6 +248,26 @@ export default function App() {
         />
       );
     }
+    if (activePage === 'orders') {
+      return (
+        <UserOrdersPage 
+          cart={cart} 
+          onCheckout={handleCheckout}
+          updateCartItemQuantity={updateCartItemQuantity}
+          removeFromCart={removeFromCart}
+        />
+      );
+    }
+    if (activePage === 'cart') {
+      return (
+        <CartPage 
+          cart={cart} 
+          onCheckout={handleCheckout} 
+          updateCartItemQuantity={updateCartItemQuantity} 
+          removeFromCart={removeFromCart} 
+        />
+      );
+    }
     if (activePage === 'menu') {
       return (
         <ProductCategoriesPage 
@@ -248,16 +276,6 @@ export default function App() {
           onSelectCategory={setSelectedCategory} 
           onSelectProduct={setSelectedProduct}
           toggleFavorite={toggleFavorite}
-        />
-      );
-    }
-    if (activePage === 'orders') {
-      return (
-        <CartPage 
-          cart={cart} 
-          onCheckout={handleCheckout} 
-          updateCartItemQuantity={updateCartItemQuantity} 
-          removeFromCart={removeFromCart} 
         />
       );
     }
@@ -284,18 +302,29 @@ export default function App() {
     );
   }
 
+  if (isConfirming) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface">
+        <Loader2 className="text-primary animate-spin mb-4" size={48} />
+        <h2 className="font-serif text-3xl font-bold text-primary">Confirming your order...</h2>
+      </div>
+    );
+  }
+
   if (orderConfirmed) {
     return (
       <div className="min-h-screen flex flex-col p-6 bg-surface">
-        <h2 className="font-serif text-3xl font-bold text-primary mb-6">Order Confirmed!</h2>
+        <h2 className="font-serif text-3xl font-bold text-primary mb-6">Order is Placed</h2>
         <div className="bg-white p-6 rounded-2xl shadow-sm space-y-4">
+          <p className="text-on-surface-variant">Order ID: <span className="font-bold text-primary">{orderConfirmed.orderId}</span></p>
+          <p className="text-on-surface-variant">Placed at: <span className="font-bold text-primary">{new Date(orderConfirmed.createdAt).toLocaleString()}</span></p>
           <p className="text-on-surface-variant">Total: <span className="font-bold text-primary">₱{orderConfirmed.total.toFixed(2)}</span></p>
           <p className="text-on-surface-variant">Payment Method: <span className="font-bold text-primary uppercase">{orderConfirmed.paymentMethod}</span></p>
           <div className="border-t pt-4">
             <h4 className="font-bold text-primary mb-2">Items Ordered</h4>
             <ul className="text-sm text-on-surface-variant space-y-1">
               {orderConfirmed.items.map((item: any, i: number) => (
-                <li key={i}>{item.quantity}x {menuProducts.find(p => p.id === item.productId)?.name} ({item.customizations.variantName})</li>
+                <li key={i}>{item.quantity}x {item.name} ({item.customizations.variantName})</li>
               ))}
             </ul>
           </div>
@@ -386,7 +415,7 @@ export default function App() {
                   </button>
                   <button onClick={() => setActivePage('settings')}>
                     <motion.div whileTap={{ rotate: 360 }}>
-                      <Settings size={20} />
+                      <SettingsIcon size={20} />
                     </motion.div>
                   </button>
                 </div>

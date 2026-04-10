@@ -12,7 +12,7 @@ export default function CommunityPage() {
   ];
 
   return (
-    <div className="pb-24 px-6 space-y-12">
+    <div className="pb-32 px-6 space-y-12">
       <h2 className="font-serif text-3xl font-bold text-primary">Community</h2>
 
       <section>

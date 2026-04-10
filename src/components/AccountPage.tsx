@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { User, MapPin, Phone, ShoppingBag, CreditCard, HelpCircle, LogOut, ChevronRight, X, Facebook, Instagram } from 'lucide-react';
 import ProfileView from './account/ProfileView';
 import AddressView from './account/AddressView';
-import ContactView from './account/ContactView';
 import OrderHistoryView from './account/OrderHistoryView';
 import PaymentHelpView from './account/PaymentHelpView';
 import SupportView from './account/SupportView';
@@ -71,8 +70,7 @@ export default function AccountPage() {
 
   const menuItems = [
     { id: 'profile', icon: User, label: 'Profile Information' },
-    { id: 'addresses', icon: MapPin, label: 'Delivery Details / Saved Address' },
-    { id: 'contact', icon: Phone, label: 'Contact Number' },
+    { id: 'addresses', icon: MapPin, label: 'Delivery Details' },
     { id: 'orders', icon: ShoppingBag, label: 'Order History' },
     { id: 'payment', icon: CreditCard, label: 'Payment Instructions / Help' },
     { id: 'support', icon: HelpCircle, label: 'Support / FAQ' },
@@ -83,7 +81,6 @@ export default function AccountPage() {
     switch (activeSection) {
       case 'profile': return <ProfileView />;
       case 'addresses': return <AddressView />;
-      case 'contact': return <ContactView />;
       case 'orders': return <OrderHistoryView />;
       case 'payment': return <PaymentHelpView />;
       case 'support': return <SupportView />;

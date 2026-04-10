@@ -16,6 +16,8 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
     const item = {
       id: Math.random().toString(),
       productId: product.id,
+      name: product.name,
+      price: (variant.price || 0) + selectedModifiers.reduce((acc, m) => acc + m.option.price, 0),
       quantity,
       customizations: { variantName: variant.name, selectedModifiers, specialInstructions }
     };
