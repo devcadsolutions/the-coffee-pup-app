@@ -157,6 +157,7 @@ export const products: Product[] = [
     imageUrl: getImage('Spanish Latte.jpg'),
     isBestSeller: true,
     isNew: true,
+    isSignature: true,
     variants: [
       { name: 'Iced', price: 110 },
       { name: 'Hot', price: 105 },
@@ -313,6 +314,7 @@ export const products: Product[] = [
     description: 'Experience the sweet and salty twist of coffee creaminess in a cup',
     category: 'Coffee',
     imageUrl: getImage('Seasalt Latte.jpg'),
+    isSignature: true,
     variants: [
       { name: 'Iced', price: 130 },
       { name: 'Hot', price: null },
@@ -341,6 +343,7 @@ export const products: Product[] = [
     description: 'Sip serenity: Espresso and Biscoff unite in harmony',
     category: 'Coffee',
     imageUrl: getImage('Biscoff Latte.jpg'),
+    isSignature: true,
     variants: [
       { name: 'Iced', price: 185 },
       { name: 'Hot', price: null },
@@ -368,6 +371,7 @@ export const products: Product[] = [
     description: 'Delight in the refreshing medley of iced matcha, milk, and juicy strawberries',
     category: 'Non-Coffee',
     imageUrl: getImage('Berry Matcha.jpg'),
+    isSignature: true,
     variants: [
       { name: 'Iced', price: 155 },
       { name: 'Bottled 400 ml', price: 200 },

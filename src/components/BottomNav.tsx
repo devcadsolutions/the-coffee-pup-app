@@ -5,48 +5,43 @@ export default function BottomNav({ activePage, setPage }: { activePage: string,
   const navItems = [
     { name: 'Home', icon: Home, id: 'home' },
     { name: 'Orders', icon: Receipt, id: 'orders' },
-    { name: 'Menu', icon: Coffee, id: 'menu', isCenter: true },
+    { name: 'Menu', icon: Coffee, id: 'menu' },
     { name: 'Community', icon: Users, id: 'community' },
     { name: 'Account', icon: User, id: 'account' },
   ];
 
   return (
-    <nav className="fixed bottom-6 left-4 right-4 z-50">
-      <div className="relative bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between px-2 h-16">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-t border-stone-100 px-4 pb-safe">
+      <div className="flex items-center justify-around h-20 max-w-lg mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activePage === item.id;
           
-          if (item.isCenter) {
-            return (
-              <div key={item.id} className="relative flex-1 flex items-center justify-center">
-                <motion.button
-                  onClick={() => setPage(item.id)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="absolute -top-6 bg-primary text-white p-4 rounded-full shadow-lg shadow-primary/30 border-4 border-white"
-                >
-                  <Icon size={24} />
-                </motion.button>
-              </div>
-            );
-          }
-
           return (
             <button
               key={item.id}
               onClick={() => setPage(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center transition-all duration-200 ${
-                isActive ? 'text-primary' : 'text-stone-400 hover:text-secondary'
-              }`}
+              className="relative flex-1 flex flex-col items-center justify-center gap-1 group"
             >
               <motion.div
                 whileTap={{ scale: 0.9 }}
-                animate={isActive ? { scale: 1.1 } : { scale: 1 }}
+                className={`p-2 rounded-2xl transition-colors duration-200 ${
+                  isActive ? 'bg-primary/10 text-primary' : 'text-stone-400 group-hover:text-stone-600'
+                }`}
               >
-                <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
               </motion.div>
-              <span className="text-[9px] font-bold mt-1">{item.name}</span>
+              <span className={`text-[10px] font-bold transition-colors duration-200 ${
+                isActive ? 'text-primary' : 'text-stone-400 group-hover:text-stone-600'
+              }`}>
+                {item.name}
+              </span>
+              {isActive && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full"
+                />
+              )}
             </button>
           );
         })}

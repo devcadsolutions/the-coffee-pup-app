@@ -1,25 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from '../../lib/firebase';
 import { Search, Filter, Eye, Trash2, Printer, ShoppingBag } from 'lucide-react';
 import { motion } from 'motion/react';
+import { sendLocalNotification, requestNotificationPermission } from '../../lib/notifications';
+import { auth } from '../../lib/firebase';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All Status');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
+    // Request permission for admin notifications
+    if (auth.currentUser) {
+      requestNotificationPermission(auth.currentUser.uid);
+    }
+
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Notify admin of new orders
+      if (!isInitialLoad.current && snapshot.docChanges().some(change => change.type === 'added')) {
+        const newOrder = snapshot.docChanges().find(change => change.type === 'added')?.doc.data() as any;
+        if (newOrder) {
+          sendLocalNotification(
+            'New Order Received!', 
+            `${newOrder.customerName} placed an order for ₱${newOrder.total.toFixed(2)}`,
+            '/admin/orders'
+          );
+        }
+      }
+      
+      // Notify admin of payment proof submissions (if paymentStatus changes to 'paid' or similar)
+      if (!isInitialLoad.current) {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'modified') {
+            const updatedOrder = change.doc.data() as any;
+            const oldOrder = orders.find(o => o.id === change.doc.id);
+            if (oldOrder && oldOrder.paymentStatus !== updatedOrder.paymentStatus && updatedOrder.paymentStatus === 'paid') {
+              sendLocalNotification(
+                'Payment Verified', 
+                `Order #${updatedOrder.orderNumber.split('_')[1]} has been marked as paid.`,
+                '/admin/orders'
+              );
+            }
+          }
+        });
+      }
+
       setOrders(ordersData);
+      isInitialLoad.current = false;
     });
     return unsubscribe;
-  }, []);
+  }, [orders.length]);
 
   const filteredOrders = orders.filter(order => 
-    (filterStatus === 'All' || order.status === filterStatus) &&
+    (filterStatus === 'All Status' || order.status === filterStatus) &&
     (order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || order.orderNumber.includes(searchTerm))
   );
 

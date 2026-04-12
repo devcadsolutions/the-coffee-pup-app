@@ -22,6 +22,7 @@ export interface Product {
   modifierGroups?: ModifierGroup[];
   isNew?: boolean;
   isBestSeller?: boolean;
+  isSignature?: boolean;
   isFavorite?: boolean;
   tags?: string[];
   status?: 'active' | 'unavailable' | 'hidden';

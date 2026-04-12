@@ -22,11 +22,15 @@ import Settings from './components/admin/Settings';
 import Dashboard from './components/admin/Dashboard';
 import { Product, CartItem, CheckoutDetails } from './types';
 import { products as initialProducts } from './data/mockData';
-import { QrCode, Download, ShoppingCart, Settings as SettingsIcon, Loader2 } from 'lucide-react';
+import { QrCode, Download, ShoppingCart, Settings as SettingsIcon, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import AnnouncementModal from './components/AnnouncementModal';
 import UserOrdersPage from './components/UserOrdersPage';
 import { auth, onAuthStateChanged, db, doc, onSnapshot, updateDoc, setDoc } from './lib/firebase';
+import NotificationBell from './components/NotificationBell';
+import InstallPrompt from './components/InstallPrompt';
+import { useInstallPrompt } from './hooks/useInstallPrompt';
+import { requestNotificationPermission, sendLocalNotification } from './lib/notifications';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -42,6 +46,17 @@ export default function App() {
   const [showQr, setShowQr] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+
+  const { showPrompt, handleInstall, handleDismiss } = useInstallPrompt();
+
+  // Service Worker Registration
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('SW registered', reg))
+        .catch(err => console.error('SW registration failed', err));
+    }
+  }, []);
 
   // Auth Listener
   useEffect(() => {
@@ -218,6 +233,17 @@ export default function App() {
       setCart([]);
       setIsCheckingOut(false);
       setIsConfirming(false);
+      
+      // Ask for notification permission after checkout
+      if (user) {
+        setTimeout(() => {
+          requestNotificationPermission(user.uid).then(granted => {
+            if (granted) {
+              sendLocalNotification('Order Placed!', `Your order #${orderId.split('_')[1]} is being prepared.`);
+            }
+          });
+        }, 1000);
+      }
     }, 3000);
   };
 
@@ -313,43 +339,94 @@ export default function App() {
 
   if (orderConfirmed) {
     return (
-      <div className="min-h-screen flex flex-col p-6 bg-surface">
-        <h2 className="font-serif text-3xl font-bold text-primary mb-6">Order is Placed</h2>
-        <div className="bg-white p-6 rounded-2xl shadow-sm space-y-4">
-          <p className="text-on-surface-variant">Order ID: <span className="font-bold text-primary">{orderConfirmed.orderId}</span></p>
-          <p className="text-on-surface-variant">Placed at: <span className="font-bold text-primary">{new Date(orderConfirmed.createdAt).toLocaleString()}</span></p>
-          <p className="text-on-surface-variant">Total: <span className="font-bold text-primary">₱{orderConfirmed.total.toFixed(2)}</span></p>
-          <p className="text-on-surface-variant">Payment Method: <span className="font-bold text-primary uppercase">{orderConfirmed.paymentMethod}</span></p>
-          <div className="border-t pt-4">
-            <h4 className="font-bold text-primary mb-2">Items Ordered</h4>
-            <ul className="text-sm text-on-surface-variant space-y-1">
+      <div className="min-h-screen bg-surface flex flex-col pt-24 pb-12 px-6 max-w-lg mx-auto">
+        <div className="text-center mb-10">
+          <div className="w-20 h-20 bg-green-50 text-green-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-600/5">
+            <CheckCircle2 size={40} />
+          </div>
+          <h2 className="serif-display text-4xl font-black text-primary mb-2">Order Placed!</h2>
+          <p className="text-stone-500 text-sm">Your brew is being prepared with love.</p>
+        </div>
+
+        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-primary/5 border border-stone-100 overflow-hidden mb-8">
+          <div className="p-8 border-b border-stone-50">
+            <div className="flex justify-between items-center mb-6">
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Order Details</span>
+              <span className="font-black text-primary text-sm">#{orderConfirmed.orderId.split('_')[1]}</span>
+            </div>
+            <div className="space-y-4">
               {orderConfirmed.items.map((item: any, i: number) => (
-                <li key={i}>{item.quantity}x {item.name} ({item.customizations.variantName})</li>
+                <div key={i} className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-lg bg-stone-50 flex items-center justify-center text-[10px] font-black text-primary">{item.quantity}x</span>
+                    <span className="text-sm font-medium text-stone-600">{item.name}</span>
+                  </div>
+                  <span className="text-sm font-black text-primary">₱{item.price.toFixed(2)}</span>
+                </div>
               ))}
-            </ul>
-          </div>
-          <div className="border-t pt-4">
-            <h4 className="font-bold text-primary mb-2">Payment QR Code</h4>
-            <div className="bg-gray-100 p-4 rounded-xl flex justify-center cursor-pointer" onClick={() => setShowQr(true)}>
-              <QrCode size={128} className="text-primary" />
             </div>
-            <p className="text-xs text-on-surface-variant mt-2">Please scan or download the QR code then send the payment and take a screenshot.</p>
+          </div>
+
+          <div className="p-8 bg-stone-50/50">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-medium text-stone-500">Payment Method</span>
+              <span className="text-xs font-black text-primary uppercase tracking-widest">{orderConfirmed.paymentMethod}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-black text-primary">Total Amount</span>
+              <span className="text-2xl font-black text-primary">₱{orderConfirmed.total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="p-8 border-t border-stone-50 text-center">
+            <h4 className="font-black text-primary text-sm mb-4 uppercase tracking-widest">Scan to Pay</h4>
+            <div className="bg-white p-6 rounded-[2rem] border-2 border-dashed border-stone-100 flex justify-center cursor-pointer group" onClick={() => setShowQr(true)}>
+              <QrCode size={160} className="text-primary group-hover:scale-105 transition-transform" />
+            </div>
+            <p className="text-[10px] text-stone-400 mt-4 leading-relaxed">
+              Please scan the QR code to complete your payment. <br/>Take a screenshot and send it to our Messenger.
+            </p>
           </div>
         </div>
-        <div className="mt-6 space-y-3">
-          <button onClick={() => { setOrderConfirmed(null); setActivePage('home'); }} className="w-full bg-primary text-white py-4 rounded-full font-bold">Return to Menu</button>
-          <button className="w-full bg-surface text-primary py-4 rounded-full font-bold border border-primary">Send to Messenger</button>
+
+        <div className="space-y-3">
+          <motion.button 
+            whileTap={{ scale: 0.98 }}
+            onClick={() => { setOrderConfirmed(null); setActivePage('home'); }} 
+            className="w-full bg-primary text-white py-5 rounded-2xl font-black text-sm shadow-xl shadow-primary/20"
+          >
+            Return to Home
+          </motion.button>
+          <motion.button 
+            whileTap={{ scale: 0.98 }}
+            className="w-full bg-white text-primary py-5 rounded-2xl font-black text-sm border-2 border-stone-100"
+          >
+            Send to Messenger
+          </motion.button>
         </div>
+
         {showQr && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" onClick={() => setShowQr(false)}>
-            <div className="bg-white p-8 rounded-2xl text-center">
-              <QrCode size={256} className="text-primary mx-auto" />
-              <p className="mt-4 font-bold">Janeane Paredes</p>
-              <div className="mt-6 flex gap-4">
-                <button className="flex-1 bg-primary text-white py-3 rounded-full font-bold flex items-center justify-center gap-2"><Download size={18} /> Download</button>
-                <button className="flex-1 bg-surface text-primary py-3 rounded-full font-bold" onClick={() => setShowQr(false)}>Back</button>
+          <div className="fixed inset-0 bg-primary/90 backdrop-blur-md z-[100] flex items-center justify-center p-6" onClick={() => setShowQr(false)}>
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white p-10 rounded-[3rem] text-center max-w-xs w-full shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="mb-6">
+                <QrCode size={200} className="text-primary mx-auto" />
               </div>
-            </div>
+              <h3 className="font-serif text-2xl font-black text-primary mb-1">Janeane Paredes</h3>
+              <p className="text-stone-400 text-xs font-black uppercase tracking-widest mb-8">GCash / Maya</p>
+              <div className="flex flex-col gap-3">
+                <button className="w-full bg-primary text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2">
+                  <Download size={18} /> Save QR Code
+                </button>
+                <button className="w-full text-stone-400 font-black text-xs uppercase tracking-widest py-2" onClick={() => setShowQr(false)}>
+                  Close
+                </button>
+              </div>
+            </motion.div>
           </div>
         )}
       </div>
@@ -394,38 +471,46 @@ export default function App() {
             </main>
           ) : (
             <>
-              <header className="fixed top-0 w-full z-50 bg-primary text-white flex items-center justify-between px-6 h-16 shadow-md">
-                <div className="w-8" />
-                <h1 className="font-serif font-bold text-xl cursor-pointer" onClick={() => setActivePage('home')}>The Coffee Pup</h1>
-                <div className="flex gap-4">
-                  <button onClick={() => setActivePage('orders')} className="relative">
-                    <motion.div whileTap={{ scale: 0.9 }}>
-                      <ShoppingCart size={20} />
-                    </motion.div>
+              <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl flex items-center justify-between px-6 h-20 border-b border-stone-100">
+                <div className="w-10" />
+                <h1 className="font-serif font-black text-2xl text-primary cursor-pointer tracking-tight" onClick={() => setActivePage('home')}>
+                  The Coffee Pup
+                </h1>
+                <div className="flex gap-3">
+                  <NotificationBell />
+                  <motion.button 
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setActivePage('orders')} 
+                    className="relative w-10 h-10 rounded-xl bg-stone-50 flex items-center justify-center text-primary"
+                  >
+                    <ShoppingCart size={20} />
                     {cart.length > 0 && (
                       <motion.span 
                         key={cart.reduce((sum, item) => sum + item.quantity, 0)}
                         initial={{ scale: 0.5 }}
                         animate={{ scale: 1 }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center"
+                        className="absolute -top-1.5 -right-1.5 bg-secondary text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 border-2 border-white"
                       >
                         {cart.reduce((sum, item) => sum + item.quantity, 0)}
                       </motion.span>
                     )}
-                  </button>
-                  <button onClick={() => setActivePage('settings')}>
-                    <motion.div whileTap={{ rotate: 360 }}>
-                      <SettingsIcon size={20} />
-                    </motion.div>
-                  </button>
+                  </motion.button>
+                  <motion.button 
+                    whileTap={{ rotate: 90 }}
+                    onClick={() => setActivePage('settings')}
+                    className="w-10 h-10 rounded-xl bg-stone-50 flex items-center justify-center text-primary"
+                  >
+                    <SettingsIcon size={20} />
+                  </motion.button>
                 </div>
               </header>
 
-              <main className="pt-20 px-6">
+              <main className="min-h-screen">
                 {renderActivePage()}
               </main>
 
               <BottomNav activePage={activePage} setPage={(page) => { setActivePage(page); setSelectedCategory(null); }} />
+              <InstallPrompt show={showPrompt} onInstall={handleInstall} onDismiss={handleDismiss} />
               {selectedAnnouncement && (
                 <AnnouncementModal announcement={selectedAnnouncement} onClose={() => setSelectedAnnouncement(null)} />
               )}
