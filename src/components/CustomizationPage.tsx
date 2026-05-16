@@ -1,14 +1,39 @@
 import { Product, CartItem, ModifierGroup, ModifierOption } from '../types';
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Share2, Plus, Minus, Check, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Minus, Check, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
+const CustomizationSection: React.FC<{ title: string, stepNumber: number, isOpen: boolean, onToggle: () => void, children: React.ReactNode }> = ({ title, stepNumber, isOpen, onToggle, children }) => (
+  <section className="border-b border-stone-100 pb-6">
+    <button onClick={onToggle} className="flex items-center justify-between w-full mb-4">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-xs">{stepNumber}</div>
+        <h2 className="font-black text-xl text-primary">{title}</h2>
+      </div>
+      {isOpen ? <ChevronUp size={20} className="text-stone-400" /> : <ChevronDown size={20} className="text-stone-400" />}
+    </button>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="overflow-hidden"
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </section>
+);
 
 export default function CustomizationPage({ product, onAddToCart, onProceedToOrder, onCancel }: { product: Product, onAddToCart: (item: CartItem) => void, onProceedToOrder: (item: CartItem) => void, onCancel: () => void }) {
   const [variant, setVariant] = useState(product.variants[0]);
   const [selectedModifiers, setSelectedModifiers] = useState<{ groupId: string; option: ModifierOption }[]>([]);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeSection, setActiveSection] = useState<string | null>('size');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -38,15 +63,13 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
       }
       return [...prev, { groupId, option }];
     });
+    // Optional: Collapse after selection? Prompt says "if chosen, add bouncing animation to collapse"
+    // setActiveSection(null); 
   };
 
   const totalPrice = ((variant.price || 0) + selectedModifiers.reduce((acc, m) => acc + m.option.price, 0)) * quantity;
 
-  const steps = [
-    { title: 'Choose Size', id: 'size' },
-    { title: 'Add-ons', id: 'addons' },
-    { title: 'Instructions', id: 'notes' }
-  ];
+  const commonRequests = ['50% sugar', 'less ice', 'no ice', 'no straw'];
 
   return (
     <div className="min-h-screen bg-surface pb-40">
@@ -119,21 +142,25 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
         </div>
 
         {/* Customization Steps */}
-        <div className="mt-10 space-y-10">
+        <div className="mt-10 space-y-6">
           {/* Step 1: Size/Variant */}
-          <section>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-xs">1</div>
-              <h2 className="font-black text-xl text-primary">Choose Size</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-3">
+          <CustomizationSection 
+            title="Choose Size" 
+            stepNumber={1} 
+            isOpen={activeSection === 'size'} 
+            onToggle={() => setActiveSection(activeSection === 'size' ? null : 'size')}
+          >
+            <div className="grid grid-cols-1 gap-3 pt-2">
               {product.variants.map(v => {
                 const isSelected = variant.name === v.name;
                 return (
                   <motion.button 
                     key={v.name} 
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => setVariant(v)} 
+                    onClick={() => {
+                      setVariant(v);
+                      setActiveSection(null);
+                    }} 
                     className={`p-5 rounded-2xl flex items-center justify-between border-2 transition-all ${
                       isSelected 
                         ? 'border-primary bg-primary/5 shadow-lg shadow-primary/5' 
@@ -153,16 +180,18 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
                 );
               })}
             </div>
-          </section>
+          </CustomizationSection>
 
           {/* Step 2: Modifiers */}
           {product.modifierGroups?.map((group, idx) => (
-            <section key={group.id}>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-xs">{idx + 2}</div>
-                <h2 className="font-black text-xl text-primary">{group.name}</h2>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            <CustomizationSection 
+              key={group.id}
+              title={group.name} 
+              stepNumber={idx + 2} 
+              isOpen={activeSection === group.id} 
+              onToggle={() => setActiveSection(activeSection === group.id ? null : group.id)}
+            >
+              <div className="grid grid-cols-2 gap-3 pt-2">
                 {group.options.map(option => {
                   const isSelected = selectedModifiers.some(m => m.groupId === group.id && m.option.id === option.id);
                   return (
@@ -187,18 +216,28 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
                   );
                 })}
               </div>
-            </section>
+            </CustomizationSection>
           ))}
 
           {/* Step 3: Special Instructions */}
-          <section>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-xs">
-                {(product.modifierGroups?.length || 0) + 2}
+          <CustomizationSection 
+            title="Special Instructions" 
+            stepNumber={(product.modifierGroups?.length || 0) + 2} 
+            isOpen={activeSection === 'notes'} 
+            onToggle={() => setActiveSection(activeSection === 'notes' ? null : 'notes')}
+          >
+            <div className="pt-2">
+              <div className="flex flex-wrap gap-2 mb-4">
+                {commonRequests.map(req => (
+                  <button
+                    key={req}
+                    onClick={() => setSpecialInstructions(prev => prev ? `${prev}, ${req}` : req)}
+                    className="px-3 py-1.5 bg-stone-100 text-stone-600 rounded-full text-xs font-black hover:bg-stone-200 transition-colors"
+                  >
+                    {req}
+                  </button>
+                ))}
               </div>
-              <h2 className="font-black text-xl text-primary">Special Instructions</h2>
-            </div>
-            <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm">
               <textarea 
                 value={specialInstructions}
                 onChange={(e) => setSpecialInstructions(e.target.value)}
@@ -206,7 +245,7 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
                 className="w-full bg-stone-50 p-4 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/10 min-h-[120px] resize-none"
               />
             </div>
-          </section>
+          </CustomizationSection>
         </div>
       </div>
 

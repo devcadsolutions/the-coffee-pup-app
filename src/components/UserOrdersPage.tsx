@@ -21,6 +21,8 @@ export default function UserOrdersPage({
   const [activeTab, setActiveTab] = useState<'cart' | 'current' | 'past'>('cart');
 
   useEffect(() => {
+    // Disable order history fetching for local-only mode
+    /*
     if (!auth.currentUser) return;
 
     const q = query(
@@ -49,6 +51,7 @@ export default function UserOrdersPage({
     });
 
     return () => unsubscribe();
+    */
   }, []);
 
   const currentOrders = orders.filter(o => !['Completed', 'Cancelled'].includes(o.status));

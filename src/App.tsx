@@ -67,7 +67,8 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Sync Cart and Favorites from Firestore
+  // Disable Sync Cart and Favorites from Firestore for local-only mode
+  /*
   useEffect(() => {
     if (!user) return;
 
@@ -88,7 +89,7 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // Sync Cart to Firestore
+  // Sync Cart to Firestore disabled for local-only mode
   useEffect(() => {
     if (!user || authLoading) return;
     
@@ -104,6 +105,7 @@ export default function App() {
     const timeoutId = setTimeout(syncCart, 1000);
     return () => clearTimeout(timeoutId);
   }, [cart, user, authLoading]);
+  */
 
   const handleAddToCart = (item: CartItem, navigateToOrders: boolean = false) => {
     setCart(prev => {
@@ -137,6 +139,9 @@ export default function App() {
   };
 
   const toggleFavorite = async (productId: string) => {
+    // Keep internal state only for local mode
+    setMenuProducts(prev => prev.map(p => p.id === productId ? { ...p, isFavorite: !p.isFavorite } : p));
+    /*
     if (!user) return;
 
     const product = menuProducts.find(p => p.id === productId);
@@ -162,6 +167,7 @@ export default function App() {
       // Revert on error
       setMenuProducts(prev => prev.map(p => p.id === productId ? { ...p, isFavorite: !isFav } : p));
     }
+    */
   };
 
   const calculateTotal = () => {
@@ -178,11 +184,8 @@ export default function App() {
   };
 
   const handleCheckout = () => {
-    if (!user) {
-      setShowAuthPrompt(true);
-    } else {
-      setIsCheckingOut(true);
-    }
+    // Enable checkout without auth prompt for local mode
+    setIsCheckingOut(true);
   };
 
   const handleConfirmOrder = async (details: CheckoutDetails) => {
@@ -219,13 +222,15 @@ export default function App() {
       updatedAt: now
     };
 
-    // Save order to Firestore
+    // Save order to Firestore disabled for local-only mode
+    /*
     try {
       const orderRef = doc(db, 'orders', orderId);
       await setDoc(orderRef, orderData);
     } catch (err) {
       console.error('Error saving order:', err);
     }
+    */
 
     // Simulate transition
     setTimeout(() => {
@@ -234,17 +239,13 @@ export default function App() {
       setIsCheckingOut(false);
       setIsConfirming(false);
       
-      // Ask for notification permission after checkout
+      // Local notification only
       if (user) {
         setTimeout(() => {
-          requestNotificationPermission(user.uid).then(granted => {
-            if (granted) {
-              sendLocalNotification('Order Placed!', `Your order #${orderId.split('_')[1]} is being prepared.`);
-            }
-          });
+          sendLocalNotification('Order Placed!', `Your order #${orderId.split('_')[1]} is being prepared.`);
         }, 1000);
       }
-    }, 3000);
+    }, 1500); // Faster simulation for counter machine feel
   };
 
   useEffect(() => {
