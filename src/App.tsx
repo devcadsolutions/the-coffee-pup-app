@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
@@ -27,6 +26,7 @@ import { motion } from 'motion/react';
 import AnnouncementModal from './components/AnnouncementModal';
 import UserOrdersPage from './components/UserOrdersPage';
 import { auth, onAuthStateChanged, db, doc, onSnapshot, updateDoc, setDoc } from './lib/firebase';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 import NotificationBell from './components/NotificationBell';
 import InstallPrompt from './components/InstallPrompt';
 import { useInstallPrompt } from './hooks/useInstallPrompt';
@@ -60,11 +60,41 @@ export default function App() {
 
   // Auth Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
+    if (isSupabaseConfigured) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          setUser({
+            uid: session.user.id,
+            email: session.user.email,
+            displayName: session.user.user_metadata?.display_name || 'Coffee Lover',
+          });
+        } else {
+          setUser(null);
+        }
+        setAuthLoading(false);
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) {
+          setUser({
+            uid: session.user.id,
+            email: session.user.email,
+            displayName: session.user.user_metadata?.display_name || 'Coffee Lover',
+          });
+        } else {
+          setUser(null);
+        }
+        setAuthLoading(false);
+      });
+
+      return () => subscription.unsubscribe();
+    } else {
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        setAuthLoading(false);
+      });
+      return () => unsubscribe();
+    }
   }, []);
 
   // Disable Sync Cart and Favorites from Firestore for local-only mode

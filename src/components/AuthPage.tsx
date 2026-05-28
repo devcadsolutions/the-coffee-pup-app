@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { auth, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, db, doc, setDoc, getDoc } from '../lib/firebase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { motion } from 'motion/react';
 import { Coffee, Mail, Lock, User, AlertCircle } from 'lucide-react';
 
@@ -13,15 +14,7 @@ export default function AuthPage({ onGuestContinue }: { onGuestContinue?: () => 
 
   const handleAuthError = (err: any) => {
     console.error('Auth Error:', err);
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-      setError('Invalid email or password.');
-    } else if (err.code === 'auth/email-already-in-use') {
-      setError('Email already in use.');
-    } else if (err.code === 'auth/weak-password') {
-      setError('Password should be at least 6 characters.');
-    } else {
-      setError('An error occurred. Please try again.');
-    }
+    setError(err.message || 'An error occurred. Please try again.');
   };
 
   const syncUserToFirestore = async (user: any, displayName?: string) => {
@@ -44,8 +37,15 @@ export default function AuthPage({ onGuestContinue }: { onGuestContinue?: () => 
     setLoading(true);
     setError('');
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await syncUserToFirestore(result.user);
+      if (isSupabaseConfigured) {
+        const { error: supabaseErr } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+        });
+        if (supabaseErr) throw supabaseErr;
+      } else {
+        const result = await signInWithPopup(auth, googleProvider);
+        await syncUserToFirestore(result.user);
+      }
     } catch (err: any) {
       handleAuthError(err);
     } finally {
@@ -58,12 +58,34 @@ export default function AuthPage({ onGuestContinue }: { onGuestContinue?: () => 
     setLoading(true);
     setError('');
     try {
-      if (isLogin) {
-        const result = await signInWithEmailAndPassword(auth, email, password);
-        await syncUserToFirestore(result.user);
+      if (isSupabaseConfigured) {
+        if (isLogin) {
+          const { error: supabaseErr } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (supabaseErr) throw supabaseErr;
+        } else {
+          const { error: supabaseErr } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                display_name: name || 'Coffee Lover',
+              },
+            },
+          });
+          if (supabaseErr) throw supabaseErr;
+          setError('Signup successful! Please check your email for confirmation.');
+        }
       } else {
-        const result = await createUserWithEmailAndPassword(auth, email, password);
-        await syncUserToFirestore(result.user, name);
+        if (isLogin) {
+          const result = await signInWithEmailAndPassword(auth, email, password);
+          await syncUserToFirestore(result.user);
+        } else {
+          const result = await createUserWithEmailAndPassword(auth, email, password);
+          await syncUserToFirestore(result.user, name);
+        }
       }
     } catch (err: any) {
       handleAuthError(err);
