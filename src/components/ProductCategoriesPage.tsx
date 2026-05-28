@@ -1,4 +1,4 @@
-import { Search, Coffee, Sandwich, Cookie, Zap, MoreHorizontal, X, Award, Heart, Leaf, Package, Sparkles } from 'lucide-react';
+import { Search, Coffee, Sandwich, Cookie, Zap, MoreHorizontal, X, Award, Heart, Leaf, Package, Sparkles, Plus } from 'lucide-react';
 import { Product } from '../types';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -44,11 +44,11 @@ export default function ProductCategoriesPage({
   });
 
   return (
-    <div className="space-y-8 pb-20">
-      {/* Search Bar */}
-      <div className="relative">
+    <div className="pt-20 px-2 sm:px-4 max-w-4xl mx-auto flex flex-col h-[calc(100vh-140px)]">
+      {/* 1. Integrated Search Bar at the Top */}
+      <div className="relative p-2 pb-3">
         <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-primary transition-colors" size={20} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-primary transition-colors" size={18} />
           <input 
             type="text" 
             value={searchQuery}
@@ -56,135 +56,159 @@ export default function ProductCategoriesPage({
               setSearchQuery(e.target.value);
               if (selectedCategory !== 'All') onSelectCategory('All');
             }}
-            placeholder="Search for your favorites..." 
-            className="w-full pl-12 pr-12 py-4 rounded-2xl bg-white border border-stone-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+            placeholder="Search our delicious brews & bakes..." 
+            className="w-full pl-11 pr-11 py-3.5 rounded-2xl bg-white border border-stone-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all text-xs"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-primary">
-              <X size={20} />
+              <X size={18} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Categories */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-black text-xl text-primary">Categories</h2>
-          <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{filteredProducts.length} Items</span>
-        </div>
-        
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-6 px-6">
+      {/* 2. Main Menu Split Layout Area */}
+      <div className="flex-1 flex overflow-hidden bg-white rounded-[2rem] border border-stone-100 shadow-sm">
+        {/* Left Category Sidebar */}
+        <aside className="w-20 sm:w-24 bg-stone-50/60 border-r border-stone-100 overflow-y-auto flex flex-col items-center py-4 gap-2 scrollbar-hide">
           {categories.map(category => {
             const Icon = category.icon;
             const isSelected = category.name === selectedCategory;
+            
             return (
               <button
                 key={category.name}
                 onClick={() => { onSelectCategory(category.name); setSearchQuery(''); }}
-                className="flex flex-col items-center gap-3 group"
+                className="w-full py-3.5 flex flex-col items-center justify-center gap-1.5 relative group"
               >
-                <motion.div 
-                  whileTap={{ scale: 0.9 }}
-                  className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                    isSelected 
-                      ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-110' 
-                      : 'bg-white text-stone-400 border border-stone-100 group-hover:border-primary/30 group-hover:text-primary'
-                  }`}
-                >
-                  <Icon size={24} />
-                </motion.div>
-                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isSelected ? 'text-primary' : 'text-stone-400'}`}>
+                {/* Active Left Indicator Bar */}
+                {isSelected && (
+                  <motion.div 
+                    layoutId="activeIndicator"
+                    className="absolute left-0 top-1/4 bottom-1/4 w-1.5 bg-primary rounded-r-full"
+                  />
+                )}
+                
+                <div className={`p-2 rounded-xl transition-all duration-200 ${
+                  isSelected 
+                    ? 'bg-primary/10 text-primary scale-105' 
+                    : 'text-stone-400 group-hover:text-stone-600'
+                }`}>
+                  <Icon size={18} />
+                </div>
+                <span className={`text-[9px] font-black uppercase tracking-wider text-center transition-colors px-1 ${
+                  isSelected ? 'text-primary' : 'text-stone-400 group-hover:text-stone-600'
+                }`}>
                   {category.name}
                 </span>
               </button>
             );
           })}
-        </div>
-      </div>
+        </aside>
 
-      {/* Product Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <AnimatePresence mode="popLayout">
-          {filteredProducts.map((product) => {
-            const isUnavailable = product.status === 'unavailable';
-            const startingPrice = Math.min(...product.variants.filter(v => v.price !== null).map(v => v.price as number));
+        {/* Right Product Scrollable List */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-5 scrollbar-hide">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-stone-50">
+            <h3 className="font-black text-xs text-stone-400 uppercase tracking-widest">
+              {selectedCategory}
+            </h3>
+            <span className="text-[10px] font-bold text-stone-400">
+              {filteredProducts.length} Items
+            </span>
+          </div>
 
-            return (
-              <motion.div 
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                key={product.id}
-                className={`group bg-white rounded-[2rem] shadow-sm border border-stone-100 overflow-hidden flex flex-col transition-all hover:shadow-xl hover:shadow-primary/5 ${isUnavailable ? 'opacity-60 grayscale' : ''}`}
-              >
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={product.imageUrl} 
-                    alt={product.name} 
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                    referrerPolicy="no-referrer" 
-                  />
-                  
-                  {/* Tags */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    {product.isBestSeller && !isUnavailable && (
-                      <div className="bg-white/90 backdrop-blur-md text-primary text-[10px] font-black px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
-                        <Sparkles size={10} className="text-secondary" />
-                        BEST SELLER
-                      </div>
-                    )}
-                    {product.isNew && !product.isBestSeller && !isUnavailable && (
-                      <div className="bg-secondary text-white text-[10px] font-black px-3 py-1 rounded-full shadow-sm">
-                        NEW ARRIVAL
-                      </div>
-                    )}
-                  </div>
+          <div className="space-y-3.5">
+            <AnimatePresence mode="popLayout">
+              {filteredProducts.map((product) => {
+                const isUnavailable = product.status === 'unavailable';
+                const startingPrice = Math.min(...product.variants.filter(v => v.price !== null).map(v => v.price as number));
 
-                  {/* Favorite Button */}
-                  <motion.button 
-                    whileTap={{ scale: 0.8 }}
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
-                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow-sm text-stone-400 hover:text-red-500 transition-colors"
+                return (
+                  <motion.div 
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    key={product.id}
+                    onClick={() => { if (!isUnavailable) onSelectProduct(product); }}
+                    className={`bg-stone-50/50 hover:bg-stone-50/80 rounded-2xl p-3 border border-stone-100/50 flex gap-3.5 items-center justify-between group cursor-pointer transition-all duration-200 ${
+                      isUnavailable ? 'opacity-65 grayscale cursor-not-allowed' : ''
+                    }`}
                   >
-                    <Heart size={16} className={product.isFavorite ? 'fill-red-500 text-red-500' : ''} />
-                  </motion.button>
-
-                  {isUnavailable && (
-                    <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-[2px] flex items-center justify-center">
-                      <span className="bg-white text-primary px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">
-                        Sold Out
-                      </span>
+                    {/* Left side: Image & Badges */}
+                    <div className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                        referrerPolicy="no-referrer" 
+                      />
+                      
+                      {isUnavailable && (
+                        <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-[1px] flex items-center justify-center">
+                          <span className="bg-white text-primary text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-wider">
+                            Sold Out
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div className="p-6 flex-1 flex flex-col">
-                  <div className="flex-1">
-                    <h3 className="font-black text-primary text-lg mb-1 group-hover:text-secondary transition-colors">{product.name}</h3>
-                    <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed mb-4">{product.description}</p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-stone-50">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-stone-400 font-black uppercase tracking-widest mb-0.5">Price</span>
-                      <span className="font-black text-primary text-lg">₱{startingPrice.toFixed(2)}</span>
+                    {/* Middle: Details */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-0.5">
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                          <h4 className="font-black text-primary text-sm line-clamp-1 group-hover:text-secondary transition-colors">
+                            {product.name}
+                          </h4>
+                          
+                          {/* Tag badges */}
+                          {product.isBestSeller && !isUnavailable && (
+                            <span className="bg-secondary/10 text-secondary text-[8px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                              <Sparkles size={8} />
+                              HOT
+                            </span>
+                          )}
+                          {product.isNew && !product.isBestSeller && !isUnavailable && (
+                            <span className="bg-primary/10 text-primary text-[8px] font-black px-1.5 py-0.5 rounded-full">
+                              NEW
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-stone-400 line-clamp-1 leading-relaxed mb-2">
+                          {product.description}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-auto">
+                        <span className="font-black text-primary text-sm">
+                          ₱{startingPrice.toFixed(2)}
+                        </span>
+                        
+                        <motion.button 
+                          whileTap={{ scale: 0.9 }}
+                          disabled={isUnavailable}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (!isUnavailable) onSelectProduct(product); 
+                          }}
+                          className="bg-primary text-white p-2 rounded-full shadow-md shadow-primary/10 group-hover:bg-secondary transition-colors disabled:bg-stone-200 disabled:shadow-none"
+                        >
+                          <Plus size={14} />
+                        </motion.button>
+                      </div>
                     </div>
-                    <motion.button 
-                      whileTap={{ scale: 0.9 }}
-                      disabled={isUnavailable}
-                      onClick={() => onSelectProduct(product)}
-                      className="bg-primary text-white px-6 py-3 rounded-2xl font-black text-xs shadow-lg shadow-primary/10 hover:bg-secondary transition-colors disabled:bg-stone-200 disabled:shadow-none"
-                    >
-                      {isUnavailable ? 'Unavailable' : 'Add to Order'}
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+            
+            {filteredProducts.length === 0 && (
+              <div className="text-center py-12 text-stone-400">
+                <p className="text-xs">No items found matching search or category.</p>
+              </div>
+            )}
+          </div>
+        </main>
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ export default function BottomNav({ activePage, setPage }: { activePage: string,
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-t border-stone-100 px-4 pb-safe">
+    <nav className="fixed bottom-3 left-4 right-4 z-50 max-w-4xl mx-auto rounded-[2rem] bg-white/85 backdrop-blur-lg border border-stone-100 px-3 pb-safe shadow-2xl shadow-primary/10 sm:left-6 sm:right-6">
       <div className="flex items-center justify-around h-20 max-w-lg mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;

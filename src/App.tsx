@@ -462,7 +462,7 @@ export default function App() {
               onCancel={() => setSelectedProduct(null)} 
             />
           ) : isCheckingOut ? (
-            <main className="pt-20 px-6">
+            <main className="pt-20 px-4 sm:px-6">
               <CheckoutPage 
                 total={calculateTotal()}
                 onConfirm={handleConfirmOrder}
@@ -472,7 +472,7 @@ export default function App() {
             </main>
           ) : (
             <>
-              <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl flex items-center justify-between px-6 h-20 border-b border-stone-100">
+              <header className="fixed top-3 left-4 right-4 z-50 h-20 max-w-4xl mx-auto rounded-[2rem] bg-white/85 backdrop-blur-xl flex items-center justify-between px-5 sm:left-6 sm:right-6 sm:px-6 border border-stone-100 shadow-lg shadow-primary/5">
                 <div className="w-10" />
                 <h1 className="font-serif font-black text-2xl text-primary cursor-pointer tracking-tight" onClick={() => setActivePage('home')}>
                   The Coffee Pup

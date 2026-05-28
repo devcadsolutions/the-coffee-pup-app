@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { db, collection, query, where, onSnapshot, orderBy } from '../lib/firebase';
 import { auth } from '../lib/firebase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Package, ShoppingCart, Trash2, Plus, Minus, Clock, CheckCircle2, XCircle, ChevronRight, Coffee, Bell } from 'lucide-react';
+import { Package, ShoppingCart, Trash2, Plus, Minus, Clock, CheckCircle2, XCircle, Coffee, Bell } from 'lucide-react';
 import { CartItem } from '../types';
 import { requestNotificationPermission, sendLocalNotification } from '../lib/notifications';
 
@@ -22,36 +22,6 @@ export default function UserOrdersPage({
 
   useEffect(() => {
     // Disable order history fetching for local-only mode
-    /*
-    if (!auth.currentUser) return;
-
-    const q = query(
-      collection(db, 'orders'),
-      where('uid', '==', auth.currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      
-      // Check for status changes to send notifications
-      if (orders.length > 0) {
-        ordersData.forEach(newOrder => {
-          const oldOrder = orders.find(o => o.id === newOrder.id);
-          if (oldOrder && oldOrder.status !== newOrder.status) {
-            sendLocalNotification(
-              'Order Status Update', 
-              `Your order #${newOrder.orderNumber.split('_')[1]} is now ${newOrder.status}!`
-            );
-          }
-        });
-      }
-      
-      setOrders(ordersData);
-    });
-
-    return () => unsubscribe();
-    */
   }, []);
 
   const currentOrders = orders.filter(o => !['Completed', 'Cancelled'].includes(o.status));
@@ -59,11 +29,11 @@ export default function UserOrdersPage({
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'Completed': return { color: 'text-green-600 bg-green-50', icon: CheckCircle2, label: 'Completed' };
-      case 'Cancelled': return { color: 'text-red-600 bg-red-50', icon: XCircle, label: 'Cancelled' };
-      case 'Preparing': return { color: 'text-orange-600 bg-orange-50', icon: Coffee, label: 'Preparing' };
-      case 'On the way': return { color: 'text-blue-600 bg-blue-50', icon: Package, label: 'On the way' };
-      default: return { color: 'text-stone-600 bg-stone-50', icon: Clock, label: 'Pending' };
+      case 'Completed': return { color: 'text-green-600 bg-green-50/70', icon: CheckCircle2, label: 'Completed' };
+      case 'Cancelled': return { color: 'text-red-600 bg-red-50/70', icon: XCircle, label: 'Cancelled' };
+      case 'Preparing': return { color: 'text-orange-600 bg-orange-50/70', icon: Coffee, label: 'Preparing' };
+      case 'On the way': return { color: 'text-blue-600 bg-blue-50/70', icon: Package, label: 'On the way' };
+      default: return { color: 'text-stone-600 bg-stone-50/70', icon: Clock, label: 'Pending' };
     }
   };
 
@@ -74,57 +44,72 @@ export default function UserOrdersPage({
   const renderContent = () => {
     if (activeTab === 'cart') {
       return (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {cart.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-[2.5rem] border border-stone-100 shadow-sm">
-              <div className="bg-stone-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <ShoppingCart size={32} className="text-stone-300" />
+            <div className="text-center py-16 bg-white rounded-[2rem] border border-stone-100 shadow-sm">
+              <div className="bg-stone-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-300">
+                <ShoppingCart size={24} />
               </div>
-              <h3 className="font-black text-primary text-xl mb-2">Your cart is empty</h3>
-              <p className="text-sm text-stone-500 mb-8">Looks like you haven't added anything yet.</p>
-              <button onClick={() => window.location.hash = '#menu'} className="bg-primary text-white px-8 py-4 rounded-full font-black text-sm">Start Ordering</button>
+              <h3 className="font-black text-primary text-base mb-1">Your cart is empty</h3>
+              <p className="text-xs text-stone-400 mb-6">Looks like you haven't added anything yet.</p>
+              <button 
+                onClick={() => {
+                  const menuBtn = document.querySelector('button[onClick*="menu"]') as HTMLButtonElement;
+                  if (menuBtn) menuBtn.click();
+                }} 
+                className="bg-primary text-white px-6 py-3.5 rounded-xl font-black text-xs uppercase tracking-wider"
+              >
+                Go to Menu
+              </button>
             </div>
           ) : (
             <>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {cart.map(item => (
                   <motion.div 
                     layout
                     key={item.id} 
-                    className="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100 flex gap-4 items-center"
+                    className="bg-white p-4 rounded-[2rem] shadow-sm border border-stone-100/80 flex gap-4 items-center justify-between group transition-all duration-300"
                   >
-                    <div className="w-20 h-20 bg-stone-50 rounded-2xl flex items-center justify-center text-primary">
-                      <Coffee size={32} />
+                    <div className="w-16 h-16 bg-stone-50 rounded-xl flex items-center justify-center text-primary flex-shrink-0">
+                      <Coffee size={24} />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-black text-primary">{item.name}</h4>
-                        <button onClick={() => removeFromCart(item.id)} className="text-stone-300 hover:text-red-500 transition-colors">
-                          <Trash2 size={18} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start mb-0.5">
+                        <h4 className="font-black text-primary text-sm truncate pr-2">{item.name}</h4>
+                        <button 
+                          onClick={() => removeFromCart(item.id)} 
+                          className="text-stone-300 hover:text-red-500 transition-colors flex-shrink-0 p-1"
+                        >
+                          <Trash2 size={15} />
                         </button>
                       </div>
-                      <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">{item.customizations.variantName}</p>
+                      <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2.5">
+                        {item.customizations.variantName}
+                      </p>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 bg-stone-50 p-1 rounded-xl">
-                          <button onClick={() => updateCartItemQuantity(item.id, -1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-primary"><Minus size={14} /></button>
-                          <span className="font-black text-sm w-4 text-center">{item.quantity}</span>
-                          <button onClick={() => updateCartItemQuantity(item.id, 1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-primary"><Plus size={14} /></button>
+                        <div className="flex items-center gap-3 bg-stone-50 p-0.5 rounded-lg">
+                          <button onClick={() => updateCartItemQuantity(item.id, -1)} className="w-7 h-7 rounded bg-white shadow-sm flex items-center justify-center text-primary"><Minus size={12} /></button>
+                          <span className="font-black text-xs w-4 text-center">{item.quantity}</span>
+                          <button onClick={() => updateCartItemQuantity(item.id, 1)} className="w-7 h-7 rounded bg-white shadow-sm flex items-center justify-center text-primary"><Plus size={12} /></button>
                         </div>
-                        <span className="font-black text-primary">₱{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                        <span className="font-black text-primary text-sm">
+                          ₱{((item.price || 0) * item.quantity).toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   </motion.div>
                 ))}
               </div>
               
-              <div className="bg-primary text-white p-8 rounded-[2.5rem] shadow-xl shadow-primary/20">
-                <div className="flex justify-between items-center mb-6">
-                  <span className="text-stone-300 font-black uppercase tracking-widest text-xs">Total Amount</span>
-                  <span className="text-3xl font-black">₱{calculateCartTotal().toFixed(2)}</span>
+              <div className="bg-primary text-white p-6 rounded-[2rem] shadow-lg shadow-primary/5">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-stone-300 font-black uppercase tracking-widest text-[9px]">Total Amount</span>
+                  <span className="text-xl font-black">₱{calculateCartTotal().toFixed(2)}</span>
                 </div>
                 <button 
                   onClick={onCheckout}
-                  className="w-full bg-white text-primary py-5 rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-all"
+                  className="w-full bg-white text-primary py-4 rounded-xl font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all"
                 >
                   Confirm & Checkout
                 </button>
@@ -137,7 +122,7 @@ export default function UserOrdersPage({
     
     const ordersToShow = activeTab === 'current' ? currentOrders : pastOrders;
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {ordersToShow.map(order => {
           const status = getStatusConfig(order.status);
           const StatusIcon = status.icon;
@@ -145,46 +130,46 @@ export default function UserOrdersPage({
             <motion.div 
               layout
               key={order.id} 
-              className="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100 group hover:border-primary/20 transition-all"
+              className="bg-white p-5 rounded-[2rem] shadow-sm border border-stone-100 group hover:border-primary/20 transition-all duration-300"
             >
-              <div className="flex justify-between items-start mb-6">
+              <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${status.color}`}>
-                    <StatusIcon size={20} />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${status.color}`}>
+                    <StatusIcon size={16} />
                   </div>
                   <div>
-                    <h4 className="font-black text-primary text-sm">Order #{order.orderNumber.split('_')[1]}</h4>
-                    <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{new Date(order.createdAt).toLocaleDateString()}</p>
+                    <h4 className="font-black text-primary text-xs">Order #{order.orderNumber.split('_')[1]}</h4>
+                    <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
-                <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${status.color}`}>
+                <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${status.color}`}>
                   {status.label}
                 </span>
               </div>
               
-              <div className="space-y-3 mb-6">
+              <div className="space-y-2 mb-4">
                 {order.items.map((item: any, i: number) => (
-                  <div key={i} className="flex justify-between items-center text-sm">
+                  <div key={i} className="flex justify-between items-center text-xs">
                     <span className="text-stone-600 font-medium">{item.quantity}x {item.name}</span>
                     <span className="text-stone-400 text-xs">₱{item.price.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
               
-              <div className="flex justify-between items-center pt-4 border-t border-stone-50">
-                <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Total Paid</span>
-                <span className="font-black text-primary text-lg">₱{order.total.toFixed(2)}</span>
+              <div className="flex justify-between items-center pt-3 border-t border-stone-50">
+                <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Total Paid</span>
+                <span className="font-black text-primary text-sm">₱{order.total.toFixed(2)}</span>
               </div>
             </motion.div>
           );
         })}
         {ordersToShow.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-[2.5rem] border border-stone-100 shadow-sm">
-            <div className="bg-stone-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Package size={32} className="text-stone-300" />
+          <div className="text-center py-16 bg-white rounded-[2rem] border border-stone-100 shadow-sm">
+            <div className="bg-stone-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-300">
+              <Package size={24} />
             </div>
-            <h3 className="font-black text-primary text-xl mb-2">No {activeTab} orders</h3>
-            <p className="text-sm text-stone-500">Your order history will appear here.</p>
+            <h3 className="font-black text-primary text-base mb-1">No {activeTab} orders</h3>
+            <p className="text-xs text-stone-400">Your order history will appear here.</p>
           </div>
         )}
       </div>
@@ -192,9 +177,9 @@ export default function UserOrdersPage({
   };
 
   return (
-    <div className="pt-24 pb-32 px-6 max-w-lg mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="serif-display text-4xl font-black text-primary">Orders</h2>
+    <div className="pt-24 pb-32 px-4 max-w-lg mx-auto">
+      <div className="flex items-center justify-between mb-6 px-2">
+        <h2 className="serif-display text-2xl font-black text-primary">Your Orders</h2>
         <div className="flex items-center gap-2">
           {Notification.permission !== 'granted' && (
             <motion.button
@@ -203,16 +188,16 @@ export default function UserOrdersPage({
               className="p-2 rounded-xl bg-secondary/10 text-secondary"
               title="Enable Notifications"
             >
-              <Bell size={18} />
+              <Bell size={16} />
             </motion.button>
           )}
-          <div className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-            {orders.length} Total
+          <div className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
+            {orders.length} Orders
           </div>
         </div>
       </div>
       
-      <div className="flex bg-stone-100 rounded-2xl p-1.5 mb-8">
+      <div className="flex bg-stone-100 rounded-2xl p-1 mb-6">
         {[
           { id: 'cart', label: 'Cart', icon: ShoppingCart },
           { id: 'current', label: 'Active', icon: Clock },
@@ -224,11 +209,11 @@ export default function UserOrdersPage({
             <button 
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-xs transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all ${
                 isActive ? 'bg-white shadow-sm text-primary' : 'text-stone-400 hover:text-stone-600'
               }`}
             >
-              <Icon size={14} />
+              <Icon size={12} />
               {tab.label}
             </button>
           );
