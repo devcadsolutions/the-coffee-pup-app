@@ -39,6 +39,7 @@ export default function BottomNav({ activePage, setPage }: { activePage: string,
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full"
                 />
               )}

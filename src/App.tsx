@@ -655,8 +655,18 @@ export default function App() {
                 </div>
               </header>
 
-              <main className="min-h-screen pt-24">
-                {renderActivePage()}
+              <main className="min-h-screen pt-24 overflow-x-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activePage}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    {renderActivePage()}
+                  </motion.div>
+                </AnimatePresence>
               </main>
 
               <BottomNav activePage={activePage} setPage={(page) => { setActivePage(page); setSelectedCategory(null); }} />
