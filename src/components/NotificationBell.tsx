@@ -29,7 +29,7 @@ export default function NotificationBell() {
       
       const newNotifications = recentOrders.map((order: any) => ({
         id: order.id,
-        title: `Order #${order.orderNumber.split('_')[1]}`,
+        title: `Order #${(order.orderNumber || order.id || '').split('_')[1] || order.id || 'N/A'}`,
         body: `Your order is now ${order.status}`,
         status: order.status,
         time: order.updatedAt,

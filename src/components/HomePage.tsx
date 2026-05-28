@@ -166,7 +166,7 @@ export default function HomePage({
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                   Live Order Tracker
                 </span>
-                <span className="text-[10px] font-mono opacity-80">#{latestActiveOrder.orderId.split('_')[1]}</span>
+                <span className="text-[10px] font-mono opacity-80">#{(latestActiveOrder.orderId || '').split('_')[1] || latestActiveOrder.id?.split('_')[1] || latestActiveOrder.id || 'N/A'}</span>
               </div>
 
               <h4 className="font-serif text-lg font-black mb-1">

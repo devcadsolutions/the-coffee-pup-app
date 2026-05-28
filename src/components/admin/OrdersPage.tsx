@@ -47,7 +47,7 @@ export default function OrdersPage() {
             if (oldOrder && oldOrder.paymentStatus !== updatedOrder.paymentStatus && updatedOrder.paymentStatus === 'paid') {
               sendLocalNotification(
                 'Payment Verified', 
-                `Order #${updatedOrder.orderId.split('_')[1]} has been marked as paid.`,
+                `Order #${(updatedOrder.orderId || updatedOrder.id || '').split('_')[1] || updatedOrder.id || 'N/A'} has been marked as paid.`,
                 '/admin/orders'
               );
             }

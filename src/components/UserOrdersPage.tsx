@@ -204,7 +204,7 @@ export default function UserOrdersPage({
                     <StatusIcon size={16} />
                   </div>
                   <div>
-                    <h4 className="font-black text-primary text-xs">Order #{order.orderNumber.split('_')[1]}</h4>
+                    <h4 className="font-black text-primary text-xs">Order #{(order.orderNumber || order.id || '').split('_')[1] || order.id || 'N/A'}</h4>
                     <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>

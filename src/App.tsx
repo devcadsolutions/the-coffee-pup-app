@@ -495,7 +495,7 @@ export default function App() {
           <div className="p-8 border-b border-stone-50">
             <div className="flex justify-between items-center mb-6">
               <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Order Details</span>
-              <span className="font-black text-primary text-sm">#{orderConfirmed.orderId.split('_')[1]}</span>
+              <span className="font-black text-primary text-sm">#{(orderConfirmed.orderId || '').split('_')[1] || orderConfirmed.id || 'N/A'}</span>
             </div>
             <div className="space-y-4">
               {orderConfirmed.items.map((item: any, i: number) => (
