@@ -1,6 +1,7 @@
 import { Product } from '../types';
 import { products } from '../data/mockData';
 import { ArrowLeft } from 'lucide-react';
+import { resolveProductImage } from '../utils/productImages';
 
 export default function MenuPage({ 
   selectedCategory, 
@@ -24,7 +25,7 @@ export default function MenuPage({
         {filteredProducts.map((product) => (
           <div key={product.id} className="group flex gap-4 items-start">
             <div className="relative bg-white rounded-lg overflow-hidden aspect-square w-24 h-24 flex items-center justify-center shrink-0">
-              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+              <img src={resolveProductImage(product)} alt={product.name} className="w-full h-full object-cover" />
             </div>
             <div className="flex-grow">
               <div className="flex justify-between items-start mb-2">

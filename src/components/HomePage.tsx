@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { announcements } from '../constants';
 import AnnouncementModal from './AnnouncementModal';
 import { motion, AnimatePresence } from 'motion/react';
+import { resolveProductImage } from '../utils/productImages';
 
 const BestsellerCard = ({ product, onSelectProduct }: { product: Product, onSelectProduct: (product: Product) => void }) => {
   const startingPrice = Math.min(...product.variants.filter(v => v.price !== null).map(v => v.price as number));
@@ -15,7 +16,7 @@ const BestsellerCard = ({ product, onSelectProduct }: { product: Product, onSele
     >
       <div className="relative h-48 overflow-hidden bg-stone-50">
         <img 
-          src={product.imageUrl} 
+          src={resolveProductImage(product)} 
           alt={product.name} 
           className="w-full h-full object-contain bg-stone-50/40 p-2 transition-transform duration-500 group-hover:scale-105"
           referrerPolicy="no-referrer"

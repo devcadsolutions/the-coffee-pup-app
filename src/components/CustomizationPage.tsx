@@ -2,6 +2,7 @@ import { Product, CartItem, ModifierOption } from '../types';
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Minus, Check, Sparkles, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { resolveProductImage } from '../utils/productImages';
 
 export default function CustomizationPage({ product, onAddToCart, onProceedToOrder, onCancel }: { product: Product, onAddToCart: (item: CartItem) => void, onProceedToOrder: (item: CartItem) => void, onCancel: () => void }) {
   const [variant, setVariant] = useState(product.variants[0]);
@@ -78,7 +79,7 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
         <motion.img 
           initial={{ scale: 1.05, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          src={product.imageUrl} 
+          src={resolveProductImage(product)} 
           alt={product.name} 
           className="w-full h-full object-contain p-6" 
           referrerPolicy="no-referrer" 

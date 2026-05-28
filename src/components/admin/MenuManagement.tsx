@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, collection, onSnapshot, doc, updateDoc } from '../../lib/firebase';
 import { Edit2, X, Plus, Trash2, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { Product } from '../../types';
-
+import { resolveProductImage } from '../../utils/productImages';
 import { products as initialProducts } from '../../data/mockData';
 
 export default function MenuManagement() {
@@ -101,7 +101,7 @@ export default function MenuManagement() {
                   <tr key={item.id} className="hover:bg-surface/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <img src={item.imageUrl} alt={item.name} className="w-10 h-10 rounded-xl object-contain bg-stone-50 border border-stone-100 p-0.5" />
+                        <img src={resolveProductImage(item)} alt={item.name} className="w-10 h-10 rounded-xl object-contain bg-stone-50 border border-stone-100 p-0.5" />
                         <div>
                           <h4 className="font-bold text-primary text-sm">{item.name}</h4>
                           <p className="text-[10px] text-stone-400 line-clamp-1 max-w-xs">{item.description}</p>

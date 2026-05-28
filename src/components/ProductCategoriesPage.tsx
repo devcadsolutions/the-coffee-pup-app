@@ -2,6 +2,7 @@ import { Search, Coffee, Sandwich, Cookie, Zap, MoreHorizontal, X, Award, Heart,
 import { Product } from '../types';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { resolveProductImage } from '../utils/productImages';
 
 export default function ProductCategoriesPage({ 
   products,
@@ -138,7 +139,7 @@ export default function ProductCategoriesPage({
                     {/* Left side: Image & Badges */}
                     <div className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
                       <img 
-                        src={product.imageUrl} 
+                        src={resolveProductImage(product)} 
                         alt={product.name} 
                         className="w-full h-full object-contain bg-stone-50/40 p-1.5 transition-transform duration-500 group-hover:scale-105" 
                         referrerPolicy="no-referrer" 
