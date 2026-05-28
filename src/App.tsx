@@ -49,24 +49,25 @@ export default function App() {
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
 
-  // Load & Sync products from Firestore in real-time
   useEffect(() => {
     const q = collection(db, 'products');
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       if (snapshot.empty) {
+        setMenuProducts(initialProducts);
         try {
           for (const product of initialProducts) {
             await setDoc(doc(db, 'products', product.id), product);
           }
         } catch (e) {
-          console.error('Error bootstrapping products:', e);
+          console.warn('Firestore products bootstrap failed, using local products list:', e);
         }
       } else {
         const productsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
         setMenuProducts(productsData);
       }
     }, (err) => {
-      console.error('Error fetching products:', err);
+      console.warn('Error fetching products, falling back to local menu:', err);
+      setMenuProducts(initialProducts);
     });
 
     return () => unsubscribe();
