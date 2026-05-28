@@ -3,6 +3,8 @@ import { db, collection, onSnapshot, doc, updateDoc } from '../../lib/firebase';
 import { Edit2, X, Plus, Trash2, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { Product } from '../../types';
 
+import { products as initialProducts } from '../../data/mockData';
+
 export default function MenuManagement() {
   const [products, setProducts] = useState<Product[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -15,8 +17,16 @@ export default function MenuManagement() {
   useEffect(() => {
     const q = collection(db, 'products');
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Product[];
-      setProducts(items);
+      if (snapshot.empty) {
+        setProducts(initialProducts);
+      } else {
+        const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Product[];
+        setProducts(items);
+      }
+      setLoading(false);
+    }, (err) => {
+      console.warn('Error fetching products on admin, using local fallback:', err);
+      setProducts(initialProducts);
       setLoading(false);
     });
     return () => unsubscribe();
