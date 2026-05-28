@@ -44,15 +44,23 @@ self.addEventListener('fetch', function(event) {
         if (response && response.status === 200) {
           const cloned = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
-            cache.put(event.request, cloned);
+            cache.put(event.request, cloned).catch(function(err) {
+              console.warn('SW cache put failed:', err);
+            });
+          }).catch(function(err) {
+            console.warn('SW cache open failed:', err);
           });
         }
         return response;
       })
-      .catch(function() {
+      .catch(function(error) {
+        console.warn('SW fetch failed, falling back to cache:', error);
         // Fallback to cache when offline
         return caches.match(event.request).then(function(cached) {
           return cached || caches.match('/index.html');
+        }).catch(function() {
+          // If match fails, return fallback response
+          return new Response('Offline and resource not cached', { status: 503, statusText: 'Offline' });
         });
       })
   );
