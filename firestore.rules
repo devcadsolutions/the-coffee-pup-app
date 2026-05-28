@@ -105,8 +105,9 @@ service cloud.firestore {
     }
 
     function isValidOrder(data) {
-      return hasOnlyAllowedFields(['uid', 'orderNumber', 'customerName', 'phoneNumber', 'address', 'type', 'items', 'subtotal', 'deliveryFee', 'total', 'paymentMethod', 'paymentStatus', 'status', 'notes', 'createdAt', 'updatedAt']) &&
+      return hasOnlyAllowedFields(['uid', 'orderId', 'orderNumber', 'customerName', 'phoneNumber', 'address', 'type', 'items', 'subtotal', 'discountCode', 'discountAmount', 'deliveryFee', 'total', 'paymentMethod', 'paymentStatus', 'status', 'notes', 'createdAt', 'updatedAt']) &&
              data.uid is string &&
+             (!('orderId' in data) || data.orderId is string) &&
              data.orderNumber is string &&
              data.customerName is string &&
              data.phoneNumber is string &&
@@ -114,6 +115,8 @@ service cloud.firestore {
              data.type in ['pickup', 'outside', 'chateau'] &&
              data.items is list &&
              isPositive('subtotal') &&
+             (!('discountCode' in data) || data.discountCode is string) &&
+             (!('discountAmount' in data) || data.discountAmount is number) &&
              isNonNegative('deliveryFee') &&
              isPositive('total') &&
              data.paymentMethod in ['gcash', 'maya'] &&

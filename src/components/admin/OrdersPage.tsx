@@ -63,7 +63,10 @@ export default function OrdersPage() {
 
   const filteredOrders = orders.filter(order => 
     (filterStatus === 'All Status' || order.status === filterStatus) &&
-    (order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || order.orderId.includes(searchTerm))
+    (
+      (order.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (order.orderId || '').includes(searchTerm)
+    )
   );
 
   const updateStatus = async (orderId: string, newStatus: string) => {
@@ -81,17 +84,21 @@ export default function OrdersPage() {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     
-    const itemsHtml = order.items.map((item: any) => `
-      <div style="display: flex; justify-between; margin-bottom: 5px;">
-        <span>${item.quantity}x ${item.name} (${item.customizations.variantName})</span>
-        <span>₱${(item.price * item.quantity).toFixed(2)}</span>
-      </div>
-      ${item.customizations.selectedModifiers.length > 0 ? `
-        <div style="font-size: 10px; color: #666; margin-left: 20px; margin-bottom: 5px;">
-          ${item.customizations.selectedModifiers.map((m: any) => `+ ${m.option.name}`).join(', ')}
+    const itemsHtml = (order.items || []).map((item: any) => {
+      const customizations = item.customizations || {};
+      const selectedModifiers = customizations.selectedModifiers || [];
+      return `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <span>${item.quantity}x ${item.name} (${customizations.variantName || 'Regular'})</span>
+          <span>₱${((item.price || 0) * item.quantity).toFixed(2)}</span>
         </div>
-      ` : ''}
-    `).join('');
+        ${selectedModifiers.length > 0 ? `
+          <div style="font-size: 10px; color: #666; margin-left: 20px; margin-bottom: 5px;">
+            ${selectedModifiers.map((m: any) => `+ ${m.option.name}`).join(', ')}
+          </div>
+        ` : ''}
+      `;
+    }).join('');
 
     printWindow.document.write(`
       <html>
@@ -108,8 +115,8 @@ export default function OrdersPage() {
         <body>
           <div class="header">
             <h2>The Coffee Pup</h2>
-            <p>Order: ${order.orderId.split('_')[1]}</p>
-            <p>${new Date(order.createdAt).toLocaleString()}</p>
+            <p>Order: ${(order.orderId || '').split('_')[1] || order.id || 'N/A'}</p>
+            <p>${order.createdAt ? new Date(order.createdAt).toLocaleString() : 'N/A'}</p>
           </div>
           <div class="item">
             ${itemsHtml}
@@ -117,21 +124,21 @@ export default function OrdersPage() {
           <div class="total">
             <div style="display: flex; justify-content: space-between;">
               <span>Subtotal:</span>
-              <span>₱${order.subtotal.toFixed(2)}</span>
+              <span>₱${(order.subtotal || 0).toFixed(2)}</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span>Delivery:</span>
-              <span>₱${order.deliveryFee.toFixed(2)}</span>
+              <span>₱${(order.deliveryFee || 0).toFixed(2)}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 18px; margin-top: 5px;">
               <span>TOTAL:</span>
-              <span>₱${order.total.toFixed(2)}</span>
+              <span>₱${(order.total || 0).toFixed(2)}</span>
             </div>
           </div>
           <div class="footer">
-            <p>Customer: ${order.customerName}</p>
-            <p>Contact: ${order.phoneNumber}</p>
-            <p>Address: ${order.address}</p>
+            <p>Customer: ${order.customerName || 'N/A'}</p>
+            <p>Contact: ${order.phoneNumber || 'N/A'}</p>
+            <p>Address: ${order.address || 'N/A'}</p>
             <p>Thank you for ordering!</p>
           </div>
           <script>
@@ -189,18 +196,18 @@ export default function OrdersPage() {
                 >
                   {statuses.map(s => <option key={s}>{s}</option>)}
                 </select>
-                <span className="font-black text-primary text-sm">₱{order.total.toFixed(2)}</span>
+                <span className="font-black text-primary text-sm">₱{(order.total || 0).toFixed(2)}</span>
               </div>
 
               {/* Customer Info */}
               <div>
-                <h4 className="font-black text-primary text-xs">{order.customerName}</h4>
-                <p className="text-[10px] text-stone-400">{new Date(order.createdAt).toLocaleDateString()}</p>
+                <h4 className="font-black text-primary text-xs">{order.customerName || 'N/A'}</h4>
+                <p className="text-[10px] text-stone-400">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</p>
               </div>
 
               {/* Bottom & Last: Order ID & Actions */}
               <div className="flex justify-between items-center pt-2 border-t border-stone-100/50">
-                <span className="text-[9px] font-mono text-stone-400">Order: #{order.orderId.split('_')[1]}</span>
+                <span className="text-[9px] font-mono text-stone-400">Order: #${(order.orderId || '').split('_')[1] || order.id || 'N/A'}</span>
                 <div className="flex gap-2">
                   <button onClick={() => setSelectedOrder(order)} className="p-2 text-primary bg-white hover:bg-stone-100 rounded-lg border border-stone-100" title="View Details">
                     <Eye size={14} />
@@ -248,10 +255,10 @@ export default function OrdersPage() {
                     </select>
                   </td>
                   <td className="p-4">
-                    <div className="font-medium text-sm">{order.customerName}</div>
-                    <div className="text-xs text-stone-400">{new Date(order.createdAt).toLocaleDateString()}</div>
+                    <div className="font-medium text-sm">{order.customerName || 'N/A'}</div>
+                    <div className="text-xs text-stone-400">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</div>
                   </td>
-                  <td className="p-4 font-bold text-sm">₱{order.total.toFixed(2)}</td>
+                  <td className="p-4 font-bold text-sm">₱{(order.total || 0).toFixed(2)}</td>
                   <td className="p-4 text-center">
                     <div className="flex justify-center gap-1">
                       <button onClick={() => setSelectedOrder(order)} className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors" title="View Details">
@@ -266,7 +273,7 @@ export default function OrdersPage() {
                     </div>
                   </td>
                   <td className="p-4 text-right font-mono text-xs font-bold text-primary">
-                    #{order.orderId.split('_')[1]}
+                    #{(order.orderId || '').split('_')[1] || order.id || 'N/A'}
                   </td>
                 </tr>
               ))}
@@ -367,21 +374,21 @@ export default function OrdersPage() {
                 <section className="bg-primary text-white p-4 rounded-2xl space-y-2">
                   <div className="flex justify-between text-xs opacity-80">
                     <span>Subtotal</span>
-                    <span>₱{selectedOrder.subtotal.toFixed(2)}</span>
+                    <span>₱{(selectedOrder.subtotal || 0).toFixed(2)}</span>
                   </div>
                   {selectedOrder.discountAmount && selectedOrder.discountAmount > 0 && (
                     <div className="flex justify-between text-xs opacity-80 text-secondary">
                       <span>Discount ({selectedOrder.discountCode})</span>
-                      <span>-₱{selectedOrder.discountAmount.toFixed(2)}</span>
+                      <span>-₱{(selectedOrder.discountAmount || 0).toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-xs opacity-80">
                     <span>Delivery Fee</span>
-                    <span>₱{selectedOrder.deliveryFee.toFixed(2)}</span>
+                    <span>₱{(selectedOrder.deliveryFee || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t border-white/20">
                     <span>Total</span>
-                    <span>₱{selectedOrder.total.toFixed(2)}</span>
+                    <span>₱{(selectedOrder.total || 0).toFixed(2)}</span>
                   </div>
                 </section>
               </div>
