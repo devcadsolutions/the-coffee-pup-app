@@ -247,7 +247,7 @@ export default function UserOrdersPage({
       <div className="flex items-center justify-between mb-6 px-2">
         <h2 className="serif-display text-2xl font-black text-primary">Your Orders</h2>
         <div className="flex items-center gap-2">
-          {Notification.permission !== 'granted' && (
+          {typeof Notification !== 'undefined' && Notification.permission !== 'granted' && (
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => auth.currentUser && requestNotificationPermission(auth.currentUser.uid)}

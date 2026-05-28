@@ -32,7 +32,7 @@ export default function SettingsPage() {
           label: 'Notifications', 
           toggle: true, 
           description: 'Brew status & rewards',
-          active: Notification.permission === 'granted',
+          active: typeof Notification !== 'undefined' && Notification.permission === 'granted',
           onClick: handleNotificationToggle
         },
         { icon: Coffee, label: 'Coffee Preferences', value: 'Medium Roast' },
