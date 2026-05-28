@@ -1,7 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MapPin, Truck, Loader2 } from 'lucide-react';
 import { CheckoutDetails } from '../types';
-import { db, doc, getDoc, collection, getDocs, query, where } from '../lib/firebase';
+import { db, doc, getDoc, collection, getDocs } from '../lib/firebase';
+
+const setCookie = (name: string, value: string, days: number = 30) => {
+  const date = new Date();
+  date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${date.toUTCString()};path=/;SameSite=Lax`;
+};
+
+const getCookie = (name: string): string => {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : '';
+};
 
 export default function CheckoutPage({ 
   onConfirm, 
@@ -18,13 +29,13 @@ export default function CheckoutPage({
   const [loading, setLoading] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [formData, setFormData] = useState({
-    name: user?.displayName || '',
+    name: getCookie('cp_name') || user?.displayName || '',
     deliveryMethod: 'Any' as 'Lalamove' | 'Grab' | 'MoveIt' | 'Any',
     pickupLocation: 'Uncle John\'s' as 'Uncle John\'s' | 'Eiffel Cluster Lobby' | 'Clubhouse',
     chateauCluster: 'Seine' as string,
     chateauBuilding: '' as 'A' | 'B' | 'C' | 'D',
     chateauUnit: '',
-    contactNumber: '',
+    contactNumber: getCookie('cp_contact') || '',
     notes: '',
     paymentMethod: 'gcash' as 'gcash' | 'maya',
     deliveryFee: 0
@@ -48,8 +59,8 @@ export default function CheckoutPage({
           const userData = userSnap.data();
           setFormData(prev => ({
             ...prev,
-            name: userData.name || prev.name,
-            contactNumber: userData.phoneNumber || prev.contactNumber
+            name: getCookie('cp_name') || userData.name || prev.name,
+            contactNumber: getCookie('cp_contact') || userData.phoneNumber || prev.contactNumber
           }));
         }
       } catch (err) {
@@ -158,6 +169,10 @@ export default function CheckoutPage({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isFormValid() && deliveryType) {
+      // Save details to cookies
+      setCookie('cp_name', formData.name);
+      setCookie('cp_contact', formData.contactNumber);
+
       // Save checkout address to localStorage
       try {
         const localSaved = localStorage.getItem('coffee_pup_saved_addresses');

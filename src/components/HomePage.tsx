@@ -17,7 +17,7 @@ const BestsellerCard = ({ product, onSelectProduct }: { product: Product, onSele
         <img 
           src={product.imageUrl} 
           alt={product.name} 
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="w-full h-full object-contain bg-stone-50/40 p-2 transition-transform duration-500 group-hover:scale-105"
           referrerPolicy="no-referrer"
         />
         <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md text-primary text-[9px] font-black px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">

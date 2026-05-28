@@ -252,15 +252,13 @@ export default function App() {
       updatedAt: now
     };
 
-    // Save order to Firestore disabled for local-only mode
-    /*
+    // Save order to Firestore
     try {
       const orderRef = doc(db, 'orders', orderId);
       await setDoc(orderRef, orderData);
     } catch (err) {
       console.error('Error saving order:', err);
     }
-    */
 
     // Simulate transition
     setTimeout(() => {

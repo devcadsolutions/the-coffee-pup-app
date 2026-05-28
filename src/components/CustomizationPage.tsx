@@ -1,13 +1,14 @@
-import { Product, CartItem, ModifierGroup, ModifierOption } from '../types';
+import { Product, CartItem, ModifierOption } from '../types';
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Minus, Check, Sparkles } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ArrowLeft, Plus, Minus, Check, Sparkles, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function CustomizationPage({ product, onAddToCart, onProceedToOrder, onCancel }: { product: Product, onAddToCart: (item: CartItem) => void, onProceedToOrder: (item: CartItem) => void, onCancel: () => void }) {
   const [variant, setVariant] = useState(product.variants[0]);
   const [selectedModifiers, setSelectedModifiers] = useState<{ groupId: string; option: ModifierOption }[]>([]);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -39,11 +40,23 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
     });
   };
 
+  const toggleGroupCollapse = (groupId: string) => {
+    setCollapsedGroups(prev => 
+      prev.includes(groupId) ? prev.filter(id => id !== groupId) : [...prev, groupId]
+    );
+  };
+
   const totalPrice = ((variant.price || 0) + selectedModifiers.reduce((acc, m) => acc + m.option.price, 0)) * quantity;
   const commonRequests = ['50% sugar', 'less ice', 'no ice', 'no straw'];
 
   return (
-    <div className="min-h-screen bg-surface pb-40">
+    <motion.div 
+      initial={{ y: "100%", opacity: 0.9 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: "100%", opacity: 0.9 }}
+      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+      className="min-h-screen bg-surface pb-40"
+    >
       {/* Header Bar */}
       <nav className="fixed top-3 left-4 right-4 z-50 h-20 max-w-4xl mx-auto rounded-[2rem] bg-white/85 backdrop-blur-xl flex items-center justify-between px-5 sm:left-6 sm:right-6 sm:px-6 border border-stone-100 shadow-md shadow-primary/5">
         <motion.button 
@@ -60,8 +73,8 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
         <div className="w-10" />
       </nav>
 
-      {/* Top Banner Image */}
-      <section className="relative pt-20 h-[32vh] w-full overflow-hidden bg-stone-50 flex items-center justify-center">
+      {/* Top Banner Image - Shows full image via object-contain and clean padding */}
+      <section className="relative pt-24 h-[35vh] w-full overflow-hidden bg-stone-50/50 flex items-center justify-center">
         <motion.img 
           initial={{ scale: 1.05, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -139,31 +152,58 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
             </div>
           </div>
 
-          {/* Add-on Modifier Groups */}
-          {product.modifierGroups?.map((group) => (
-            <div key={group.id} className="space-y-3 pt-2 border-t border-stone-50">
-              <h3 className="font-black text-[10px] text-stone-400 uppercase tracking-wider">{group.name}</h3>
-              <div className="flex flex-wrap gap-2">
-                {group.options.map(option => {
-                  const isSelected = selectedModifiers.some(m => m.groupId === group.id && m.option.id === option.id);
-                  return (
-                    <button 
-                      key={option.id} 
-                      onClick={() => toggleModifier(group.id, option)}
-                      className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all border flex items-center gap-1.5 ${
-                        isSelected 
-                          ? 'bg-secondary text-white border-secondary shadow-sm' 
-                          : 'bg-white text-stone-600 border-stone-100 hover:border-secondary/20'
-                      }`}
+          {/* Add-on Modifier Groups (Collapsible) */}
+          {product.modifierGroups?.map((group) => {
+            const isCollapsed = collapsedGroups.includes(group.id);
+            return (
+              <div key={group.id} className="pt-2 border-t border-stone-50 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => toggleGroupCollapse(group.id)}
+                  className="w-full flex items-center justify-between py-1 focus:outline-none"
+                >
+                  <h3 className="font-black text-[10px] text-stone-400 uppercase tracking-wider">{group.name}</h3>
+                  <motion.div
+                    animate={{ rotate: isCollapsed ? 0 : 180 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                    className="text-stone-400"
+                  >
+                    <ChevronDown size={14} />
+                  </motion.div>
+                </button>
+                
+                <AnimatePresence initial={false}>
+                  {!isCollapsed && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                      className="flex flex-wrap gap-2 overflow-hidden"
                     >
-                      {isSelected && <Check size={12} />}
-                      {option.name} <span className={isSelected ? 'text-white/80' : 'text-stone-400 font-normal'}>+₱{option.price}</span>
-                    </button>
-                  );
-                })}
+                      {group.options.map(option => {
+                        const isSelected = selectedModifiers.some(m => m.groupId === group.id && m.option.id === option.id);
+                        return (
+                          <button 
+                            key={option.id} 
+                            onClick={() => toggleModifier(group.id, option)}
+                            className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all border flex items-center gap-1.5 ${
+                              isSelected 
+                                ? 'bg-secondary text-white border-secondary shadow-sm' 
+                                : 'bg-white text-stone-600 border-stone-100 hover:border-secondary/20'
+                            }`}
+                          >
+                            {isSelected && <Check size={12} />}
+                            {option.name} <span className={isSelected ? 'text-white/80' : 'text-stone-400 font-normal'}>+₱{option.price}</span>
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Special Instructions Notes */}
           <div className="space-y-3 pt-2 border-t border-stone-50">
@@ -214,6 +254,6 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
           </div>
         </div>
       </footer>
-    </div>
+    </motion.div>
   );
 }

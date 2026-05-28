@@ -140,7 +140,7 @@ export default function ProductCategoriesPage({
                       <img 
                         src={product.imageUrl} 
                         alt={product.name} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                        className="w-full h-full object-contain bg-stone-50/40 p-1.5 transition-transform duration-500 group-hover:scale-105" 
                         referrerPolicy="no-referrer" 
                       />
                       

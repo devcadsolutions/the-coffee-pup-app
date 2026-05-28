@@ -21,7 +21,36 @@ export default function UserOrdersPage({
   const [activeTab, setActiveTab] = useState<'cart' | 'current' | 'past'>('cart');
 
   useEffect(() => {
-    // Disable order history fetching for local-only mode
+    let unsubscribe: () => void = () => {};
+    
+    const unsubAuth = auth.onAuthStateChanged((user) => {
+      unsubscribe();
+      if (!user) {
+        setOrders([]);
+        return;
+      }
+      
+      const q = query(
+        collection(db, 'orders'),
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
+      
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const ordersData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setOrders(ordersData);
+      }, (error) => {
+        console.error("Error fetching orders:", error);
+      });
+    });
+    
+    return () => {
+      unsubAuth();
+      unsubscribe();
+    };
   }, []);
 
   const currentOrders = orders.filter(o => !['Completed', 'Cancelled'].includes(o.status));
