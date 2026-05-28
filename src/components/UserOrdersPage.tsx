@@ -47,7 +47,7 @@ export default function UserOrdersPage({
 
       // 1. Subscribe to logged-in user orders
       if (userId) {
-        const qUser = query(collection(db, 'orders'), where('userId', '==', userId));
+        const qUser = query(collection(db, 'orders'), where('uid', '==', userId));
         unsubscribeUser = onSnapshot(qUser, (snapshot) => {
           snapshot.docs.forEach(doc => {
             userOrdersMap.set(doc.id, { id: doc.id, ...doc.data() });
