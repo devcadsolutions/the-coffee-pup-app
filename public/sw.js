@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coffee-pup-v1';
+const CACHE_NAME = 'coffee-pup-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
