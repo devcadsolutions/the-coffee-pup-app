@@ -1,4 +1,4 @@
-import { Coffee, Star, Leaf, Cake, Award, Clock, MapPin, ChevronLeft, ChevronRight, Truck, Package, Info, Quote, Plus, Sparkles, Navigation, Send } from 'lucide-react';
+import { Coffee, Star, Leaf, Cake, Award, Clock, MapPin, Truck, Package, Plus, Sparkles, ChevronRight, X, AlertCircle } from 'lucide-react';
 import { Product } from '../types';
 import { useRef, useState, useEffect } from 'react';
 import { announcements } from '../constants';
@@ -48,11 +48,31 @@ const BestsellerCard = ({ product, onSelectProduct }: { product: Product, onSele
   );
 };
 
-export default function HomePage({ products, onOrderNow, onCategorySelect, onSelectProduct }: { products: Product[], onOrderNow: () => void, onCategorySelect: (category: string) => void, onSelectProduct: (product: Product) => void }) {
+export default function HomePage({ 
+  products, 
+  onOrderNow, 
+  onCategorySelect, 
+  onSelectProduct,
+  orders = []
+}: { 
+  products: Product[], 
+  onOrderNow: () => void, 
+  onCategorySelect: (category: string) => void, 
+  onSelectProduct: (product: Product) => void,
+  orders?: any[]
+}) {
   const bestSellers = products.filter(p => p.isBestSeller).slice(0, 6);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
   const [orderType, setOrderType] = useState<'pickup' | 'delivery'>('pickup');
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
+  const [selectedAddress, setSelectedAddress] = useState<string>('');
+  const [showAddressModal, setShowAddressModal] = useState(false);
+
+  // Address Modal temporary states
+  const [tempPickupLocation, setTempPickupLocation] = useState<'Uncle John\'s' | 'Eiffel Cluster Lobby' | 'Clubhouse'>('Uncle John\'s');
+  const [tempCluster, setTempCluster] = useState('Seine');
+  const [tempBuilding, setTempBuilding] = useState<'A' | 'B' | 'C' | 'D'>('A');
+  const [tempUnit, setTempUnit] = useState('');
 
   const homeCategories = [
     { id: 'Coffee', name: 'Coffee', icon: Coffee },
@@ -63,9 +83,6 @@ export default function HomePage({ products, onOrderNow, onCategorySelect, onSel
     { id: 'Toasts', name: 'Toasts', icon: Cake },
     { id: 'Pastries', name: 'Pastries', icon: Cake },
   ];
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const annScrollRef = useRef<HTMLDivElement>(null);
 
   const promos = [
     { title: "First Order Discount", desc: "Enjoy ₱20 OFF on your first purchase!", code: "WELCOME20" },
@@ -80,20 +97,122 @@ export default function HomePage({ products, onOrderNow, onCategorySelect, onSel
     return () => clearInterval(timer);
   }, []);
 
-  const testimonials = [
-    { name: "Maria S.", text: "The Spanish Latte is a game changer! Best coffee in Chateau Elysee.", rating: 5 },
-    { name: "James R.", text: "Super fast delivery and the packaging is so cute. My daily morning ritual.", rating: 5 },
-    { name: "Liza K.", text: "The Egg & Cheese toast is perfect for breakfast. Highly recommended!", rating: 4 },
-  ];
+  // Initialize address values
+  useEffect(() => {
+    const saved = localStorage.getItem('coffee_pup_current_address');
+    if (saved) {
+      setSelectedAddress(saved);
+      // Parse details
+      if (saved.startsWith('Pickup - ')) {
+        setOrderType('pickup');
+        setTempPickupLocation(saved.replace('Pickup - ', '') as any);
+      } else {
+        setOrderType('delivery');
+        const parts = saved.split(' ');
+        if (parts.length >= 3) {
+          setTempCluster(parts[0]);
+          setTempBuilding(parts[1] as any);
+          setTempUnit(parts[2]);
+        }
+      }
+    } else {
+      setSelectedAddress(orderType === 'pickup' ? "Pickup - Uncle John's" : "Seine A 101");
+    }
+  }, [orderType]);
+
+  const handleSaveAddress = () => {
+    let finalAddress = '';
+    if (orderType === 'pickup') {
+      finalAddress = `Pickup - ${tempPickupLocation}`;
+    } else {
+      if (!tempUnit) {
+        alert('Please enter your unit number.');
+        return;
+      }
+      finalAddress = `${tempCluster} ${tempBuilding} ${tempUnit}`;
+    }
+    localStorage.setItem('coffee_pup_current_address', finalAddress);
+    setSelectedAddress(finalAddress);
+    setShowAddressModal(false);
+  };
+
+  // Find active orders
+  const activeOrders = orders.filter(o => ['Pending', 'Preparing', 'Out for Delivery'].includes(o.status));
+  const latestActiveOrder = activeOrders[0];
+
+  const getStatusStep = (status: string) => {
+    if (status === 'Preparing') return 2;
+    if (status === 'Out for Delivery') return 3;
+    return 1; // Pending
+  };
 
   return (
     <div className="pb-32 bg-surface">
-      {/* 1. Header Order Type Selection Toggle (Cotti App Signature Style) */}
+      {/* Active Order Status Tracker Widget (Pulsing Apple-Style Card) */}
+      <AnimatePresence>
+        {latestActiveOrder && (
+          <motion.section 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="px-4 pt-4 max-w-lg mx-auto"
+          >
+            <div className="bg-primary text-white rounded-[2rem] p-5 shadow-lg border border-primary/20 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-xl" />
+              
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[9px] font-black uppercase tracking-widest bg-white/20 px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  Live Order Tracker
+                </span>
+                <span className="text-[10px] font-mono opacity-80">#{latestActiveOrder.orderId.split('_')[1]}</span>
+              </div>
+
+              <h4 className="font-serif text-lg font-black mb-1">
+                {latestActiveOrder.status === 'Pending' ? 'Order Placed' : 
+                 latestActiveOrder.status === 'Preparing' ? 'Brewing Coffee' : 
+                 'Out for Delivery'}
+              </h4>
+              <p className="text-[11px] opacity-80 mb-4 leading-relaxed">
+                {latestActiveOrder.status === 'Pending' ? 'Waiting for confirmation from the shop...' : 
+                 latestActiveOrder.status === 'Preparing' ? 'Your coffee is being crafted with love.' : 
+                 'Our rider is delivering it straight to your lobby!'}
+              </p>
+
+              {/* Steps Progress Indicator */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[9px] uppercase font-black tracking-wider opacity-60">
+                  <span>Placed</span>
+                  <span>Brewing</span>
+                  <span>Dispatched</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[1, 2, 3].map(step => {
+                    const currentStep = getStatusStep(latestActiveOrder.status);
+                    const isCompleted = currentStep >= step;
+                    const isActive = currentStep === step;
+                    return (
+                      <div 
+                        key={step} 
+                        className={`h-1.5 rounded-full transition-all duration-500 ${
+                          isCompleted ? 'bg-secondary' : 'bg-white/20'
+                        } ${isActive ? 'animate-pulse shadow-sm shadow-secondary/50' : ''}`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      {/* 1. Header Order Type & Address Picker */}
       <section className="pt-4 px-4 max-w-lg mx-auto">
         <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-stone-100/80">
           <div className="flex bg-stone-50 p-1 rounded-2xl mb-4">
             <button
-              onClick={() => setOrderType('pickup')}
+              onClick={() => { setOrderType('pickup'); }}
               className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 ${
                 orderType === 'pickup' ? 'bg-primary text-white shadow-md shadow-primary/10' : 'text-stone-400 hover:text-primary'
               }`}
@@ -102,7 +221,7 @@ export default function HomePage({ products, onOrderNow, onCategorySelect, onSel
               Store Pickup
             </button>
             <button
-              onClick={() => setOrderType('delivery')}
+              onClick={() => { setOrderType('delivery'); }}
               className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 ${
                 orderType === 'delivery' ? 'bg-primary text-white shadow-md shadow-primary/10' : 'text-stone-400 hover:text-primary'
               }`}
@@ -114,17 +233,21 @@ export default function HomePage({ products, onOrderNow, onCategorySelect, onSel
 
           <div className="flex items-center justify-between text-xs px-2">
             <div className="flex items-center gap-2 text-stone-600">
-              <MapPin size={14} className="text-secondary" />
-              <div>
-                <p className="font-black text-primary text-sm">The Coffee Pup HQ</p>
-                <p className="text-[10px] text-stone-400">Chateau Elysee, Parañaque City</p>
+              <MapPin size={14} className="text-secondary flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="font-black text-primary text-sm truncate max-w-[200px]">
+                  {orderType === 'pickup' ? 'Pickup Location' : 'Delivery Address'}
+                </p>
+                <p className="text-[10px] text-stone-400 truncate max-w-[200px]">
+                  {selectedAddress}
+                </p>
               </div>
             </div>
             <button 
-              onClick={onOrderNow}
-              className="bg-secondary/10 hover:bg-secondary/20 text-secondary px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-colors"
+              onClick={() => setShowAddressModal(true)}
+              className="bg-secondary/15 hover:bg-secondary/25 text-secondary px-3.5 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider transition-colors"
             >
-              {orderType === 'pickup' ? 'Order' : 'Set Address'}
+              Change
             </button>
           </div>
         </div>
@@ -148,137 +271,171 @@ export default function HomePage({ products, onOrderNow, onCategorySelect, onSel
                 Exclusive Deal
               </span>
               <h3 className="font-serif text-xl font-black mb-1">{promos[currentPromoIndex].title}</h3>
-              <p className="text-xs text-stone-300">{promos[currentPromoIndex].desc}</p>
+              <p className="text-[11px] opacity-80 leading-relaxed mb-4">{promos[currentPromoIndex].desc}</p>
             </motion.div>
           </AnimatePresence>
+        </div>
+      </section>
 
-          <div className="flex justify-between items-center z-10 pt-4 mt-2 border-t border-white/10">
-            <span className="text-[9px] font-mono tracking-widest text-stone-300">CODE: {promos[currentPromoIndex].code}</span>
-            <div className="flex gap-1">
-              {promos.map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === currentPromoIndex ? 'bg-secondary w-3' : 'bg-white/30'}`} 
-                />
-              ))}
-            </div>
+      {/* Categories Grid Selection */}
+      <section className="px-4 mt-8 max-w-lg mx-auto">
+        <div className="flex items-center gap-2 px-2 mb-4">
+          <Clock size={12} className="text-secondary" />
+          <h3 className="font-black text-[10px] text-stone-400 uppercase tracking-widest">Our Categories</h3>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none px-1">
+          {homeCategories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => onCategorySelect(cat.id)}
+              className="flex flex-col items-center gap-2 bg-white p-4.5 rounded-[1.8rem] shadow-sm border border-stone-100 hover:border-primary/20 transition-all min-w-[85px] flex-shrink-0 group"
+            >
+              <div className="p-3.5 rounded-2xl bg-stone-50 text-primary group-hover:bg-primary/5 group-hover:text-secondary transition-colors">
+                <cat.icon size={18} />
+              </div>
+              <span className="text-[10px] font-black text-primary tracking-tight">{cat.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Bestsellers Section */}
+      <section className="px-4 mt-8 max-w-lg mx-auto">
+        <div className="flex items-center justify-between px-2 mb-4">
+          <div className="flex items-center gap-2">
+            <Sparkles size={12} className="text-secondary" />
+            <h3 className="font-black text-[10px] text-stone-400 uppercase tracking-widest">Signature Bestsellers</h3>
           </div>
-        </div>
-      </section>
-
-      {/* 3. Category Grid - Compact & Friendly Icons */}
-      <section className="px-4 mt-10 max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-black text-sm text-stone-400 uppercase tracking-widest">Categories</h2>
-          <button onClick={() => onCategorySelect('All')} className="text-xs font-black text-secondary hover:underline flex items-center gap-0.5">
-            View All <ChevronRight size={14} />
+          <button 
+            onClick={onOrderNow}
+            className="text-[10px] text-secondary font-black uppercase tracking-wider flex items-center gap-0.5 hover:underline"
+          >
+            Full Menu <ChevronRight size={12} />
           </button>
         </div>
-        <div className="grid grid-cols-4 gap-3 bg-white p-4 rounded-[2rem] border border-stone-100/80 shadow-sm">
-          {homeCategories.map(cat => {
-            const Icon = cat.icon;
-            return (
-              <motion.button 
-                key={cat.id} 
-                whileTap={{ scale: 0.95 }}
-                onClick={() => onCategorySelect(cat.id)} 
-                className="flex flex-col items-center gap-2 group p-2 rounded-2xl hover:bg-stone-50 transition-colors"
-              >
-                <div className="bg-stone-50 group-hover:bg-primary/5 p-3 rounded-full text-primary transition-colors">
-                  <Icon size={20} />
-                </div>
-                <span className="font-bold text-[10px] text-stone-600 line-clamp-1">{cat.name}</span>
-              </motion.button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 4. Best Sellers Section */}
-      <section className="px-4 mt-10 max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-black text-sm text-stone-400 uppercase tracking-widest">🔥 Best Sellers</h2>
-          <button onClick={() => onCategorySelect('All')} className="text-xs font-black text-secondary hover:underline flex items-center gap-0.5">
-            Full Menu <ChevronRight size={14} />
-          </button>
-        </div>
-        <div 
-          ref={scrollRef} 
-          className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
-        >
+        
+        <div className="grid grid-cols-2 gap-4">
           {bestSellers.map(product => (
-            <div key={product.id} className="min-w-[180px] w-[180px] snap-start">
-              <BestsellerCard product={product} onSelectProduct={onSelectProduct} />
-            </div>
+            <BestsellerCard key={product.id} product={product} onSelectProduct={onSelectProduct} />
           ))}
         </div>
       </section>
 
-      {/* 5. What's New / Announcements */}
-      <section className="px-4 mt-10 max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-black text-sm text-stone-400 uppercase tracking-widest">What's New</h2>
-          <div className="flex gap-1.5">
-            <button onClick={() => annScrollRef.current?.scrollBy({ left: -260, behavior: 'smooth' })} className="p-1.5 rounded-full bg-white border border-stone-100 text-primary shadow-sm"><ChevronLeft size={12} /></button>
-            <button onClick={() => annScrollRef.current?.scrollBy({ left: 260, behavior: 'smooth' })} className="p-1.5 rounded-full bg-white border border-stone-100 text-primary shadow-sm"><ChevronRight size={12} /></button>
-          </div>
-        </div>
-        <div 
-          ref={annScrollRef}
-          className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
-        >
-          {announcements.map((ann) => (
-            <motion.button 
-              key={ann.id} 
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setSelectedAnnouncement(ann)} 
-              className="min-w-[260px] w-[260px] snap-start bg-white p-5 rounded-[2rem] shadow-sm border border-stone-100 text-left group hover:border-secondary/30 transition-all duration-300"
-            >
-              <div className="bg-secondary/15 text-secondary w-8 h-8 rounded-xl flex items-center justify-center mb-3 group-hover:bg-secondary group-hover:text-white transition-all">
-                <Info size={16} />
-              </div>
-              <h3 className="font-black text-primary text-sm mb-1 line-clamp-1 group-hover:text-secondary transition-colors">{ann.title}</h3>
-              <p className="text-xs text-stone-400 line-clamp-2 leading-relaxed">{ann.description}</p>
-            </motion.button>
-          ))}
-        </div>
-      </section>
-
-      {/* 6. Cohesive Reviews Carousel */}
-      <section className="px-4 mt-10 max-w-lg mx-auto">
-        <div className="text-center mb-6">
-          <h2 className="font-black text-sm text-stone-400 uppercase tracking-widest mb-1">What People Say</h2>
-          <p className="text-xs text-stone-500">Reviews from our coffee loving neighbors</p>
-        </div>
-        <div className="grid grid-cols-1 gap-4">
-          {testimonials.slice(0, 2).map((t, i) => (
-            <div 
-              key={i} 
-              className="bg-white p-5 rounded-[2rem] shadow-sm border border-stone-100 relative overflow-hidden"
-            >
-              <Quote className="absolute -right-2 -bottom-2 text-stone-50 pointer-events-none" size={60} />
-              <div className="flex gap-0.5 mb-2">
-                {[...Array(5)].map((_, starI) => (
-                  <Star key={starI} size={12} className={starI < t.rating ? "fill-yellow-400 text-yellow-400" : "text-stone-200"} />
-                ))}
-              </div>
-              <p className="text-xs text-stone-600 font-medium italic mb-3">"{t.text}"</p>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center font-black text-primary text-[9px]">
-                  {t.name.charAt(0)}
-                </div>
-                <p className="text-[10px] font-black text-secondary uppercase tracking-widest">{t.name}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
+      {/* Address Picker Sheet Modal (Slide-up Apple-style) */}
       <AnimatePresence>
-        {selectedAnnouncement && (
-          <AnnouncementModal announcement={selectedAnnouncement} onClose={() => setSelectedAnnouncement(null)} />
+        {showAddressModal && (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-center p-0" onClick={() => setShowAddressModal(false)}>
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-t-[2.5rem] p-6 w-full max-w-lg shadow-2xl space-y-6 pb-12"
+            >
+              <div className="flex justify-between items-center border-b border-stone-50 pb-4">
+                <h3 className="font-serif text-xl font-black text-primary">
+                  {orderType === 'pickup' ? 'Select Pickup Spot' : 'Set Delivery Location'}
+                </h3>
+                <button onClick={() => setShowAddressModal(false)} className="p-2 bg-stone-50 hover:bg-stone-100 rounded-full text-stone-400">
+                  <X size={18} />
+                </button>
+              </div>
+
+              {orderType === 'pickup' ? (
+                <div className="space-y-3">
+                  <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest">Available Spots</label>
+                  <div className="grid gap-2.5">
+                    {['Uncle John\'s', 'Eiffel Cluster Lobby', 'Clubhouse'].map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => setTempPickupLocation(loc as any)}
+                        className={`p-4 rounded-2xl font-black text-xs text-left transition-all flex justify-between items-center border ${
+                          tempPickupLocation === loc 
+                            ? 'bg-primary text-white border-primary shadow-sm' 
+                            : 'bg-stone-50 text-stone-600 border-stone-100'
+                        }`}
+                      >
+                        {loc}
+                        {tempPickupLocation === loc && <Star size={12} className="text-secondary fill-secondary" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest">Cluster</label>
+                    <div className="flex flex-wrap gap-2">
+                      {['Concorde', 'La Fayette', 'Eiffel', 'Seine', 'Vendome', 'Ritz'].map(c => (
+                        <button 
+                          key={c} 
+                          type="button" 
+                          onClick={() => setTempCluster(c)} 
+                          className={`px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all border ${
+                            tempCluster === c 
+                              ? 'bg-primary text-white border-primary shadow-sm' 
+                              : 'bg-stone-50 text-stone-600 border-stone-100'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest">Building</label>
+                      <div className="flex gap-2">
+                        {['A', 'B', 'C', 'D'].map(b => (
+                          <button 
+                            key={b} 
+                            type="button" 
+                            onClick={() => setTempBuilding(b as any)} 
+                            className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition-all border ${
+                              tempBuilding === b 
+                                ? 'bg-primary text-white border-primary shadow-sm' 
+                                : 'bg-stone-50 text-stone-600 border-stone-100'
+                            }`}
+                          >
+                            {b}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest">Unit Number</label>
+                      <input 
+                        required 
+                        type="text" 
+                        value={tempUnit} 
+                        onChange={e => setTempUnit(e.target.value)} 
+                        placeholder="e.g. 101" 
+                        className="w-full px-4 py-2.5 rounded-xl bg-stone-50 border border-stone-100 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-xs transition-all" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={handleSaveAddress}
+                className="w-full py-4 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all mt-4"
+              >
+                Confirm Spot
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
+
+      {/* Announcement Modal Support */}
+      {selectedAnnouncement && (
+        <AnnouncementModal announcement={selectedAnnouncement} onClose={() => setSelectedAnnouncement(null)} />
+      )}
     </div>
   );
 }

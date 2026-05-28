@@ -19,13 +19,14 @@ import AddonManagement from './components/admin/AddonManagement';
 import Reports from './components/admin/Reports';
 import Settings from './components/admin/Settings';
 import Dashboard from './components/admin/Dashboard';
+import PromoManagement from './components/admin/PromoManagement';
 import { Product, CartItem, CheckoutDetails } from './types';
 import { products as initialProducts } from './data/mockData';
 import { QrCode, Download, ShoppingCart, Settings as SettingsIcon, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import AnnouncementModal from './components/AnnouncementModal';
 import UserOrdersPage from './components/UserOrdersPage';
-import { auth, onAuthStateChanged, db, doc, onSnapshot, updateDoc, setDoc } from './lib/firebase';
+import { auth, onAuthStateChanged, db, doc, onSnapshot, updateDoc, setDoc, collection, query, where } from './lib/firebase';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import NotificationBell from './components/NotificationBell';
 import InstallPrompt from './components/InstallPrompt';
@@ -46,6 +47,99 @@ export default function App() {
   const [showQr, setShowQr] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [orders, setOrders] = useState<any[]>([]);
+
+  // Load & Sync products from Firestore in real-time
+  useEffect(() => {
+    const q = collection(db, 'products');
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      if (snapshot.empty) {
+        try {
+          for (const product of initialProducts) {
+            await setDoc(doc(db, 'products', product.id), product);
+          }
+        } catch (e) {
+          console.error('Error bootstrapping products:', e);
+        }
+      } else {
+        const productsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
+        setMenuProducts(productsData);
+      }
+    }, (err) => {
+      console.error('Error fetching products:', err);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Listen to orders for active status tracking (both user and guest)
+  useEffect(() => {
+    let unsubscribeUser: () => void = () => {};
+    let unsubscribeLocal: () => void = () => {};
+    
+    const localOrderIds: string[] = (() => {
+      try {
+        const stored = localStorage.getItem('coffee_pup_placed_orders');
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        return [];
+      }
+    })();
+
+    const handleOrdersUpdate = (userId: string | null) => {
+      unsubscribeUser();
+      unsubscribeLocal();
+
+      const userOrdersMap = new Map<string, any>();
+
+      const updateMergedOrders = () => {
+        const mergedList = Array.from(userOrdersMap.values());
+        mergedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setOrders(mergedList);
+      };
+
+      if (userId) {
+        const qUser = query(collection(db, 'orders'), where('userId', '==', userId));
+        unsubscribeUser = onSnapshot(qUser, (snapshot) => {
+          snapshot.docs.forEach(doc => {
+            userOrdersMap.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          updateMergedOrders();
+        });
+      }
+
+      if (localOrderIds.length > 0) {
+        const chunks = [];
+        for (let i = 0; i < localOrderIds.length; i += 10) {
+          chunks.push(localOrderIds.slice(i, i + 10));
+        }
+
+        const unsubscribes = chunks.map(chunk => {
+          const qLocal = query(collection(db, 'orders'), where('orderId', 'in', chunk));
+          return onSnapshot(qLocal, (snapshot) => {
+            snapshot.docs.forEach(doc => {
+              userOrdersMap.set(doc.id, { id: doc.id, ...doc.data() });
+            });
+            updateMergedOrders();
+          });
+        });
+
+        unsubscribeLocal = () => {
+          unsubscribes.forEach(unsub => unsub());
+        };
+      }
+    };
+
+    const unsubAuth = auth.onAuthStateChanged((user) => {
+      handleOrdersUpdate(user ? user.uid : null);
+    });
+
+    return () => {
+      unsubAuth();
+      unsubscribeUser();
+      unsubscribeLocal();
+    };
+  }, []);
 
   const { showPrompt, handleInstall, handleDismiss } = useInstallPrompt();
 
@@ -218,14 +312,16 @@ export default function App() {
     setIsCheckingOut(true);
   };
 
-  const handleConfirmOrder = async (details: CheckoutDetails) => {
+  const handleConfirmOrder = async (details: CheckoutDetails & { discountCode?: string; discountAmount?: number }) => {
     setIsConfirming(true);
-    const total = calculateTotal() + details.deliveryFee;
     const subtotal = calculateTotal();
+    const discountAmount = details.discountAmount || 0;
+    const total = Math.max(0, subtotal + details.deliveryFee - discountAmount);
     const orderId = `order_${Date.now()}`;
     const now = new Date().toISOString();
 
     const orderData = {
+      orderId,
       uid: user?.uid || 'guest',
       orderNumber: orderId,
       customerName: details.name,
@@ -242,6 +338,8 @@ export default function App() {
         customizations: item.customizations
       })),
       subtotal,
+      discountCode: details.discountCode || '',
+      discountAmount,
       deliveryFee: details.deliveryFee,
       total,
       paymentMethod: details.paymentMethod,
@@ -256,6 +354,20 @@ export default function App() {
     try {
       const orderRef = doc(db, 'orders', orderId);
       await setDoc(orderRef, orderData);
+
+      // Save orderId to local storage for fallback guest history
+      try {
+        const localOrders = localStorage.getItem('coffee_pup_placed_orders');
+        let orderList = [];
+        if (localOrders) {
+          orderList = JSON.parse(localOrders);
+          if (!Array.isArray(orderList)) orderList = [];
+        }
+        orderList.push(orderId);
+        localStorage.setItem('coffee_pup_placed_orders', JSON.stringify(orderList));
+      } catch (e) {
+        console.error('Error saving placed order ID locally:', e);
+      }
     } catch (err) {
       console.error('Error saving order:', err);
     }
@@ -300,6 +412,7 @@ export default function App() {
           onOrderNow={() => { setActivePage('menu'); setSelectedCategory('All'); }} 
           onCategorySelect={(cat) => { setActivePage('menu'); setSelectedCategory(cat); }} 
           onSelectProduct={setSelectedProduct} 
+          orders={orders}
         />
       );
     }
@@ -401,6 +514,12 @@ export default function App() {
               <span className="text-xs font-medium text-stone-500">Payment Method</span>
               <span className="text-xs font-black text-primary uppercase tracking-widest">{orderConfirmed.paymentMethod}</span>
             </div>
+            {orderConfirmed.discountAmount && orderConfirmed.discountAmount > 0 ? (
+              <div className="flex justify-between items-center mb-2 text-secondary">
+                <span className="text-xs font-medium">Discount ({orderConfirmed.discountCode})</span>
+                <span className="text-xs font-black">-₱{orderConfirmed.discountAmount.toFixed(2)}</span>
+              </div>
+            ) : null}
             <div className="flex justify-between items-center">
               <span className="text-sm font-black text-primary">Total Amount</span>
               <span className="text-2xl font-black text-primary">₱{orderConfirmed.total.toFixed(2)}</span>
@@ -473,6 +592,7 @@ export default function App() {
               <Route path="orders" element={<OrdersPage />} />
               <Route path="menu" element={<MenuManagement />} />
               <Route path="addons" element={<AddonManagement />} />
+              <Route path="promos" element={<PromoManagement />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/admin/dashboard" />} />

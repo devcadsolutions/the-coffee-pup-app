@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ShoppingBag, Coffee, Settings, BarChart, LogOut } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Coffee, Settings, BarChart, LogOut, Tag } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -9,6 +9,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
     { name: 'Menu', path: '/admin/menu', icon: Coffee },
     { name: 'Add-ons', path: '/admin/addons', icon: Coffee },
+    { name: 'Promos', path: '/admin/promos', icon: Tag },
     { name: 'Reports', path: '/admin/reports', icon: BarChart },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];

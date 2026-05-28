@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Truck, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Truck, Loader2, Tag } from 'lucide-react';
 import { CheckoutDetails } from '../types';
 import { db, doc, getDoc, collection, getDocs } from '../lib/firebase';
 
@@ -20,25 +20,64 @@ export default function CheckoutPage({
   total,
   user
 }: { 
-  onConfirm: (details: CheckoutDetails) => void, 
+  onConfirm: (details: CheckoutDetails & { discountCode?: string; discountAmount?: number }) => void, 
   onCancel: () => void,
   total: number,
   user?: any
 }) {
-  const [deliveryType, setDeliveryType] = useState<'pickup' | 'outside' | 'chateau' | null>(null);
+  const [deliveryType, setDeliveryType] = useState<'pickup' | 'outside' | 'chateau' | null>(() => {
+    const savedAddressStr = localStorage.getItem('coffee_pup_current_address') || '';
+    if (savedAddressStr) {
+      if (savedAddressStr.startsWith('Pickup - ')) {
+        return 'pickup';
+      } else {
+        return 'chateau';
+      }
+    }
+    return null;
+  });
+
   const [loading, setLoading] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    name: getCookie('cp_name') || user?.displayName || '',
-    deliveryMethod: 'Any' as 'Lalamove' | 'Grab' | 'MoveIt' | 'Any',
-    pickupLocation: 'Uncle John\'s' as 'Uncle John\'s' | 'Eiffel Cluster Lobby' | 'Clubhouse',
-    chateauCluster: 'Seine' as string,
-    chateauBuilding: '' as 'A' | 'B' | 'C' | 'D',
-    chateauUnit: '',
-    contactNumber: getCookie('cp_contact') || '',
-    notes: '',
-    paymentMethod: 'gcash' as 'gcash' | 'maya',
-    deliveryFee: 0
+
+  // Promo Code States
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<any | null>(null);
+  const [promoError, setPromoError] = useState('');
+  const [verifyingPromo, setVerifyingPromo] = useState(false);
+
+  const [formData, setFormData] = useState(() => {
+    const savedAddressStr = localStorage.getItem('coffee_pup_current_address') || '';
+    let initialPickup: any = 'Uncle John\'s';
+    let initialCluster = 'Seine';
+    let initialBuilding: any = 'A';
+    let initialUnit = '';
+
+    if (savedAddressStr) {
+      if (savedAddressStr.startsWith('Pickup - ')) {
+        initialPickup = savedAddressStr.replace('Pickup - ', '');
+      } else {
+        const parts = savedAddressStr.split(' ');
+        if (parts.length >= 3) {
+          initialCluster = parts[0];
+          initialBuilding = parts[1];
+          initialUnit = parts[2];
+        }
+      }
+    }
+
+    return {
+      name: getCookie('cp_name') || user?.displayName || '',
+      deliveryMethod: 'Any' as 'Lalamove' | 'Grab' | 'MoveIt' | 'Any',
+      pickupLocation: initialPickup as any,
+      chateauCluster: initialCluster,
+      chateauBuilding: initialBuilding as any,
+      chateauUnit: initialUnit,
+      contactNumber: getCookie('cp_contact') || '',
+      notes: '',
+      paymentMethod: 'gcash' as 'gcash' | 'maya',
+      deliveryFee: 0
+    };
   });
 
   useEffect(() => {
@@ -78,7 +117,6 @@ export default function CheckoutPage({
     const loadSavedAddresses = async () => {
       const list: any[] = [];
 
-      // 1. Get from localStorage
       try {
         const localSaved = localStorage.getItem('coffee_pup_saved_addresses');
         if (localSaved) {
@@ -91,7 +129,6 @@ export default function CheckoutPage({
         console.error(e);
       }
 
-      // 2. Get from Firestore
       if (user?.uid) {
         try {
           const addressesRef = collection(db, 'users', user.uid, 'addresses');
@@ -116,7 +153,6 @@ export default function CheckoutPage({
         }
       }
 
-      // De-duplicate
       const uniqueList: any[] = [];
       const seen = new Set();
       for (const item of list) {
@@ -153,6 +189,47 @@ export default function CheckoutPage({
       notes: addr.notes || prev.notes || ''
     }));
   };
+
+  const verifyPromoCode = async () => {
+    setPromoError('');
+    const codeUpper = promoCodeInput.toUpperCase().trim();
+    if (!codeUpper) return;
+
+    setVerifyingPromo(true);
+    try {
+      const docRef = doc(db, 'promos', codeUpper);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const promo = docSnap.data();
+        if (promo.isActive) {
+          setAppliedPromo({ code: codeUpper, ...promo });
+        } else {
+          setPromoError('This promo code is no longer active.');
+          setAppliedPromo(null);
+        }
+      } else {
+        setPromoError('Invalid promo code.');
+        setAppliedPromo(null);
+      }
+    } catch (e) {
+      console.error(e);
+      setPromoError('Error verifying code.');
+    } finally {
+      setVerifyingPromo(false);
+    }
+  };
+
+  const getDiscountAmount = () => {
+    if (!appliedPromo) return 0;
+    if (appliedPromo.type === 'fixed') {
+      return appliedPromo.discountValue;
+    } else {
+      return (total * appliedPromo.discountValue) / 100;
+    }
+  };
+
+  const discountAmount = getDiscountAmount();
+  const finalTotal = Math.max(0, total + formData.deliveryFee - discountAmount);
 
   const clusters = ['Concorde', 'La Fayette', 'Eiffel', 'Seine', 'Vendome', 'Ritz'];
   const buildings = ['A', 'B', 'C', 'D'];
@@ -215,7 +292,9 @@ export default function CheckoutPage({
 
       onConfirm({
         type: deliveryType,
-        ...formData
+        ...formData,
+        discountCode: appliedPromo ? appliedPromo.code : undefined,
+        discountAmount: appliedPromo ? discountAmount : undefined
       });
     }
   };
@@ -317,6 +396,7 @@ export default function CheckoutPage({
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 px-2">
+          {/* Order Location Form card */}
           <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-stone-100 space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-stone-50">
               <h3 className="font-black text-primary text-sm">Order Details</h3>
@@ -433,34 +513,94 @@ export default function CheckoutPage({
                 <label className="block text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1.5">Notes</label>
                 <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Any special instructions?" rows={2} className="w-full px-4 py-3 rounded-xl bg-stone-50/50 border border-stone-100 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-xs transition-all resize-none" />
               </div>
+            </div>
+          </div>
 
-              <div className="space-y-2 pt-2 border-t border-stone-50">
-                <label className="block text-[9px] font-black text-stone-400 uppercase tracking-widest">Payment Method</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {['gcash', 'maya'].map(method => (
-                    <button 
-                      key={method} 
-                      type="button" 
-                      onClick={() => setFormData({...formData, paymentMethod: method as 'gcash' | 'maya'})} 
-                      className={`py-3.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all ${
-                        formData.paymentMethod === method 
-                          ? 'bg-primary text-white shadow-sm' 
-                          : 'bg-stone-50 text-stone-600 border border-stone-100'
-                      }`}
-                    >
-                      {method}
-                    </button>
-                  ))}
-                </div>
+          {/* Promo Code Entry Box */}
+          <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-stone-100 space-y-3">
+            <label className="block text-[9px] font-black text-stone-400 uppercase tracking-widest">Have a promo code?</label>
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={promoCodeInput}
+                onChange={e => setPromoCodeInput(e.target.value)}
+                placeholder="E.g. WELCOME20" 
+                className="flex-1 px-4 py-2.5 rounded-xl bg-stone-50 border border-stone-100 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-xs font-bold uppercase transition-all"
+                disabled={!!appliedPromo}
+              />
+              {appliedPromo ? (
+                <button
+                  type="button"
+                  onClick={() => { setAppliedPromo(null); setPromoCodeInput(''); }}
+                  className="bg-red-50 text-red-600 px-4 rounded-xl text-xs font-bold border border-red-100"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={verifyPromoCode}
+                  disabled={verifyingPromo || !promoCodeInput}
+                  className="bg-primary text-white px-4 rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-50"
+                >
+                  {verifyingPromo ? '...' : 'Apply'}
+                </button>
+              )}
+            </div>
+            {promoError && <p className="text-[10px] text-red-500 font-bold">{promoError}</p>}
+            {appliedPromo && (
+              <p className="text-[10px] text-green-600 font-bold flex items-center gap-1">
+                <Tag size={10} /> Promo code {appliedPromo.code} applied!
+              </p>
+            )}
+          </div>
+
+          {/* Payment Method card */}
+          <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-stone-100 space-y-4">
+            <div className="space-y-2">
+              <label className="block text-[9px] font-black text-stone-400 uppercase tracking-widest">Payment Method</label>
+              <div className="grid grid-cols-2 gap-3">
+                {['gcash', 'maya'].map(method => (
+                  <button 
+                    key={method} 
+                    type="button" 
+                    onClick={() => setFormData({...formData, paymentMethod: method as 'gcash' | 'maya'})} 
+                    className={`py-3.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all ${
+                      formData.paymentMethod === method 
+                        ? 'bg-primary text-white shadow-sm' 
+                        : 'bg-stone-50 text-stone-600 border border-stone-100'
+                    }`}
+                  >
+                    {method}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
           <div className="fixed bottom-3 left-4 right-4 max-w-lg mx-auto rounded-[2rem] bg-white/90 backdrop-blur-xl p-4 border border-stone-100 shadow-2xl z-50">
             <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5 px-1 border-b border-stone-50 pb-2">
+                <div className="flex justify-between items-center text-[10px] font-bold text-stone-400">
+                  <span>Subtotal</span>
+                  <span>₱{total.toFixed(2)}</span>
+                </div>
+                {formData.deliveryFee > 0 && (
+                  <div className="flex justify-between items-center text-[10px] font-bold text-stone-400">
+                    <span>Delivery Fee</span>
+                    <span>₱{formData.deliveryFee.toFixed(2)}</span>
+                  </div>
+                )}
+                {appliedPromo && (
+                  <div className="flex justify-between items-center text-[10px] font-bold text-secondary">
+                    <span>Promo Discount ({appliedPromo.code})</span>
+                    <span>-₱{discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
               <div className="flex justify-between items-center px-1">
                 <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Total Amount</span>
-                <span className="text-xl font-black text-primary">₱{total.toFixed(2)}</span>
+                <span className="text-xl font-black text-primary">₱{finalTotal.toFixed(2)}</span>
               </div>
               <button 
                 type="submit"

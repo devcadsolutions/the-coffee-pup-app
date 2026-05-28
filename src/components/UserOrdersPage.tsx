@@ -21,35 +21,72 @@ export default function UserOrdersPage({
   const [activeTab, setActiveTab] = useState<'cart' | 'current' | 'past'>('cart');
 
   useEffect(() => {
-    let unsubscribe: () => void = () => {};
+    let unsubscribeUser: () => void = () => {};
+    let unsubscribeLocal: () => void = () => {};
     
-    const unsubAuth = auth.onAuthStateChanged((user) => {
-      unsubscribe();
-      if (!user) {
-        setOrders([]);
-        return;
+    const localOrderIds: string[] = (() => {
+      try {
+        const stored = localStorage.getItem('coffee_pup_placed_orders');
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        return [];
       }
-      
-      const q = query(
-        collection(db, 'orders'),
-        where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc')
-      );
-      
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        const ordersData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setOrders(ordersData);
-      }, (error) => {
-        console.error("Error fetching orders:", error);
-      });
+    })();
+
+    const handleOrdersUpdate = (userId: string | null) => {
+      unsubscribeUser();
+      unsubscribeLocal();
+
+      const userOrdersMap = new Map<string, any>();
+
+      const updateMergedOrders = () => {
+        const mergedList = Array.from(userOrdersMap.values());
+        mergedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setOrders(mergedList);
+      };
+
+      // 1. Subscribe to logged-in user orders
+      if (userId) {
+        const qUser = query(collection(db, 'orders'), where('userId', '==', userId));
+        unsubscribeUser = onSnapshot(qUser, (snapshot) => {
+          snapshot.docs.forEach(doc => {
+            userOrdersMap.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          updateMergedOrders();
+        });
+      }
+
+      // 2. Subscribe to guest orders placed on this device
+      if (localOrderIds.length > 0) {
+        const chunks = [];
+        for (let i = 0; i < localOrderIds.length; i += 10) {
+          chunks.push(localOrderIds.slice(i, i + 10));
+        }
+
+        const unsubscribes = chunks.map(chunk => {
+          const qLocal = query(collection(db, 'orders'), where('orderId', 'in', chunk));
+          return onSnapshot(qLocal, (snapshot) => {
+            snapshot.docs.forEach(doc => {
+              userOrdersMap.set(doc.id, { id: doc.id, ...doc.data() });
+            });
+            updateMergedOrders();
+          });
+        });
+
+        unsubscribeLocal = () => {
+          unsubscribes.forEach(unsub => unsub());
+        };
+      }
+    };
+
+    const unsubAuth = auth.onAuthStateChanged((user) => {
+      handleOrdersUpdate(user ? user.uid : null);
     });
-    
+
     return () => {
       unsubAuth();
-      unsubscribe();
+      unsubscribeUser();
+      unsubscribeLocal();
     };
   }, []);
 
@@ -61,7 +98,7 @@ export default function UserOrdersPage({
       case 'Completed': return { color: 'text-green-600 bg-green-50/70', icon: CheckCircle2, label: 'Completed' };
       case 'Cancelled': return { color: 'text-red-600 bg-red-50/70', icon: XCircle, label: 'Cancelled' };
       case 'Preparing': return { color: 'text-orange-600 bg-orange-50/70', icon: Coffee, label: 'Preparing' };
-      case 'On the way': return { color: 'text-blue-600 bg-blue-50/70', icon: Package, label: 'On the way' };
+      case 'Out for Delivery': return { color: 'text-blue-600 bg-blue-50/70', icon: Package, label: 'Out for Delivery' };
       default: return { color: 'text-stone-600 bg-stone-50/70', icon: Clock, label: 'Pending' };
     }
   };

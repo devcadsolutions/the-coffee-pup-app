@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { db, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from '../../lib/firebase';
-import { Search, Filter, Eye, Trash2, Printer, ShoppingBag } from 'lucide-react';
-import { motion } from 'motion/react';
+import { db, collection, onSnapshot, query, doc, updateDoc, deleteDoc } from '../../lib/firebase';
+import { Search, Eye, Trash2, Printer, ShoppingBag, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { sendLocalNotification, requestNotificationPermission } from '../../lib/notifications';
 import { auth } from '../../lib/firebase';
 
@@ -12,16 +12,20 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const isInitialLoad = useRef(true);
 
+  const statuses = ['Pending', 'Preparing', 'Out for Delivery', 'Completed', 'Cancelled'];
+
   useEffect(() => {
-    // Request permission for admin notifications
     if (auth.currentUser) {
       requestNotificationPermission(auth.currentUser.uid);
     }
 
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'orders'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
+      // Client-side sort by date to avoid composite index limits
+      ordersData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
       // Notify admin of new orders
       if (!isInitialLoad.current && snapshot.docChanges().some(change => change.type === 'added')) {
         const newOrder = snapshot.docChanges().find(change => change.type === 'added')?.doc.data() as any;
@@ -34,7 +38,7 @@ export default function OrdersPage() {
         }
       }
       
-      // Notify admin of payment proof submissions (if paymentStatus changes to 'paid' or similar)
+      // Notify admin of payment updates
       if (!isInitialLoad.current) {
         snapshot.docChanges().forEach(change => {
           if (change.type === 'modified') {
@@ -43,7 +47,7 @@ export default function OrdersPage() {
             if (oldOrder && oldOrder.paymentStatus !== updatedOrder.paymentStatus && updatedOrder.paymentStatus === 'paid') {
               sendLocalNotification(
                 'Payment Verified', 
-                `Order #${updatedOrder.orderNumber.split('_')[1]} has been marked as paid.`,
+                `Order #${updatedOrder.orderId.split('_')[1]} has been marked as paid.`,
                 '/admin/orders'
               );
             }
@@ -59,7 +63,7 @@ export default function OrdersPage() {
 
   const filteredOrders = orders.filter(order => 
     (filterStatus === 'All Status' || order.status === filterStatus) &&
-    (order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || order.orderNumber.includes(searchTerm))
+    (order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || order.orderId.includes(searchTerm))
   );
 
   const updateStatus = async (orderId: string, newStatus: string) => {
@@ -92,7 +96,7 @@ export default function OrdersPage() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Receipt ${order.orderNumber}</title>
+          <title>Receipt ${order.orderId}</title>
           <style>
             body { font-family: 'Courier New', Courier, monospace; width: 300px; margin: 0 auto; padding: 20px; }
             .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
@@ -104,7 +108,7 @@ export default function OrdersPage() {
         <body>
           <div class="header">
             <h2>The Coffee Pup</h2>
-            <p>Order: ${order.orderNumber}</p>
+            <p>Order: ${order.orderId.split('_')[1]}</p>
             <p>${new Date(order.createdAt).toLocaleString()}</p>
           </div>
           <div class="item">
@@ -140,7 +144,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="space-y-6 max-h-[calc(100vh-120px)] overflow-hidden flex flex-col">
+    <div className="space-y-6 max-h-[calc(100vh-120px)] flex flex-col">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <h2 className="text-2xl font-bold text-primary">Orders Management</h2>
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -151,80 +155,129 @@ export default function OrdersPage() {
               placeholder="Search orders..." 
               value={searchTerm} 
               onChange={e => setSearchTerm(e.target.value)} 
-              className="pl-10 pr-4 py-2 rounded-lg border border-surface-container-high w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-primary/20" 
+              className="pl-10 pr-4 py-2.5 rounded-xl border border-surface-container-high w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white text-xs" 
             />
           </div>
           <select 
             value={filterStatus} 
             onChange={e => setFilterStatus(e.target.value)} 
-            className="px-4 py-2 rounded-lg border border-surface-container-high bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="px-4 py-2.5 rounded-xl border border-surface-container-high bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 text-xs font-bold"
           >
             <option>All Status</option>
-            {['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Out for Delivery', 'Completed', 'Cancelled'].map(s => <option key={s}>{s}</option>)}
+            {statuses.map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col border border-surface-container-low">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-3xl shadow-sm overflow-hidden flex-1 flex flex-col border border-surface-container-low">
+        {/* Mobile View: Stacked Order Cards */}
+        <div className="md:hidden divide-y divide-stone-50 overflow-y-auto max-h-[60vh] p-2 space-y-3">
+          {filteredOrders.map(order => (
+            <div key={order.id} className="bg-stone-50/50 p-4 rounded-2xl border border-stone-100 flex flex-col gap-3">
+              {/* Top & Most Evident: Status and Price */}
+              <div className="flex justify-between items-center">
+                <select 
+                  value={order.status} 
+                  onChange={e => updateStatus(order.id, e.target.value)} 
+                  className={`p-2 rounded-xl border text-[10px] font-black uppercase transition-colors bg-white ${
+                    order.status === 'Completed' ? 'border-green-200 text-green-700' :
+                    order.status === 'Cancelled' ? 'border-red-200 text-red-700' :
+                    order.status === 'Out for Delivery' ? 'border-blue-200 text-blue-700' :
+                    order.status === 'Preparing' ? 'border-orange-200 text-orange-700' :
+                    'border-stone-200 text-stone-700'
+                  }`}
+                >
+                  {statuses.map(s => <option key={s}>{s}</option>)}
+                </select>
+                <span className="font-black text-primary text-sm">₱{order.total.toFixed(2)}</span>
+              </div>
+
+              {/* Customer Info */}
+              <div>
+                <h4 className="font-black text-primary text-xs">{order.customerName}</h4>
+                <p className="text-[10px] text-stone-400">{new Date(order.createdAt).toLocaleDateString()}</p>
+              </div>
+
+              {/* Bottom & Last: Order ID & Actions */}
+              <div className="flex justify-between items-center pt-2 border-t border-stone-100/50">
+                <span className="text-[9px] font-mono text-stone-400">Order: #{order.orderId.split('_')[1]}</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setSelectedOrder(order)} className="p-2 text-primary bg-white hover:bg-stone-100 rounded-lg border border-stone-100" title="View Details">
+                    <Eye size={14} />
+                  </button>
+                  <button onClick={() => printReceipt(order)} className="p-2 text-stone-600 bg-white hover:bg-stone-100 rounded-lg border border-stone-100" title="Print Receipt">
+                    <Printer size={14} />
+                  </button>
+                  <button onClick={() => deleteOrder(order.id)} className="p-2 text-red-500 bg-white hover:bg-red-50 rounded-lg border border-stone-100" title="Delete Order">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop View: Responsive Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead className="bg-surface text-on-surface-variant text-xs uppercase sticky top-0 z-10">
               <tr>
-                <th className="p-4 font-bold">Order #</th>
+                <th className="p-4 font-bold">Status</th>
                 <th className="p-4 font-bold">Customer</th>
                 <th className="p-4 font-bold">Total</th>
-                <th className="p-4 font-bold">Status</th>
-                <th className="p-4 font-bold text-right">Actions</th>
+                <th className="p-4 font-bold text-center">Actions</th>
+                <th className="p-4 font-bold text-right">Order #</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container-low">
               {filteredOrders.map(order => (
                 <tr key={order.id} className="hover:bg-surface/50 transition-colors">
-                  <td className="p-4 font-bold text-primary">
-                    <button onClick={() => setSelectedOrder(order)} className="hover:underline">
-                      #{order.orderNumber.split('_')[1]}
-                    </button>
-                  </td>
-                  <td className="p-4">
-                    <div className="font-medium">{order.customerName}</div>
-                    <div className="text-xs text-stone-400">{new Date(order.createdAt).toLocaleDateString()}</div>
-                  </td>
-                  <td className="p-4 font-bold">₱{order.total.toFixed(2)}</td>
                   <td className="p-4">
                     <select 
                       value={order.status} 
                       onChange={e => updateStatus(order.id, e.target.value)} 
-                      className={`p-1.5 rounded-lg border text-xs font-bold uppercase transition-colors ${
-                        order.status === 'Completed' ? 'bg-green-50 border-green-200 text-green-700' :
-                        order.status === 'Cancelled' ? 'bg-red-50 border-red-200 text-red-700' :
-                        'bg-blue-50 border-blue-200 text-blue-700'
+                      className={`p-1.5 rounded-lg border text-xs font-bold uppercase transition-colors bg-white ${
+                        order.status === 'Completed' ? 'border-green-200 text-green-700' :
+                        order.status === 'Cancelled' ? 'border-red-200 text-red-700' :
+                        order.status === 'Out for Delivery' ? 'border-blue-200 text-blue-700' :
+                        order.status === 'Preparing' ? 'border-orange-200 text-orange-700' :
+                        'border-stone-200 text-stone-700'
                       }`}
                     >
-                      {['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Out for Delivery', 'Completed', 'Cancelled'].map(s => <option key={s}>{s}</option>)}
+                      {statuses.map(s => <option key={s}>{s}</option>)}
                     </select>
                   </td>
-                  <td className="p-4 text-right">
-                    <div className="flex justify-end gap-2">
+                  <td className="p-4">
+                    <div className="font-medium text-sm">{order.customerName}</div>
+                    <div className="text-xs text-stone-400">{new Date(order.createdAt).toLocaleDateString()}</div>
+                  </td>
+                  <td className="p-4 font-bold text-sm">₱{order.total.toFixed(2)}</td>
+                  <td className="p-4 text-center">
+                    <div className="flex justify-center gap-1">
                       <button onClick={() => setSelectedOrder(order)} className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors" title="View Details">
-                        <Eye size={18} />
+                        <Eye size={16} />
                       </button>
                       <button onClick={() => printReceipt(order)} className="p-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors" title="Print Receipt">
-                        <Printer size={18} />
+                        <Printer size={16} />
                       </button>
                       <button onClick={() => deleteOrder(order.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete Order">
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
+                  </td>
+                  <td className="p-4 text-right font-mono text-xs font-bold text-primary">
+                    #{order.orderId.split('_')[1]}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
         {filteredOrders.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-stone-400">
             <ShoppingBag size={48} className="mb-4 opacity-20" />
-            <p>No orders found matching your criteria.</p>
+            <p className="text-sm">No orders found matching your criteria.</p>
           </div>
         )}
       </div>
@@ -239,10 +292,10 @@ export default function OrdersPage() {
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-2xl font-serif font-bold text-primary">Order Details</h3>
-                <p className="text-stone-400 font-mono text-sm">#{selectedOrder.orderNumber}</p>
+                <p className="text-stone-400 font-mono text-sm">#{selectedOrder.orderId}</p>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-surface rounded-full transition-colors">
-                <Trash2 className="rotate-45" size={24} />
+              <button onClick={() => setSelectedOrder(null)} className="p-2 bg-stone-50 hover:bg-stone-100 rounded-full text-stone-400">
+                <ChevronRight className="rotate-95" size={20} />
               </button>
             </div>
 
@@ -316,6 +369,12 @@ export default function OrdersPage() {
                     <span>Subtotal</span>
                     <span>₱{selectedOrder.subtotal.toFixed(2)}</span>
                   </div>
+                  {selectedOrder.discountAmount && selectedOrder.discountAmount > 0 && (
+                    <div className="flex justify-between text-xs opacity-80 text-secondary">
+                      <span>Discount ({selectedOrder.discountCode})</span>
+                      <span>-₱{selectedOrder.discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xs opacity-80">
                     <span>Delivery Fee</span>
                     <span>₱{selectedOrder.deliveryFee.toFixed(2)}</span>
