@@ -492,7 +492,7 @@ export default function App() {
               onCancel={() => setSelectedProduct(null)} 
             />
           ) : isCheckingOut ? (
-            <main className="pt-20 px-4 sm:px-6">
+            <main className="pt-24 px-4 sm:px-6">
               <CheckoutPage 
                 total={calculateTotal()}
                 onConfirm={handleConfirmOrder}
@@ -536,7 +536,7 @@ export default function App() {
                 </div>
               </header>
 
-              <main className="min-h-screen">
+              <main className="min-h-screen pt-24">
                 {renderActivePage()}
               </main>
 

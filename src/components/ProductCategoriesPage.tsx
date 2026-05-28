@@ -44,7 +44,7 @@ export default function ProductCategoriesPage({
   });
 
   return (
-    <div className="pt-20 px-2 sm:px-4 max-w-4xl mx-auto flex flex-col h-[calc(100vh-140px)]">
+    <div className="pt-4 px-2 sm:px-4 max-w-4xl mx-auto flex flex-col h-[calc(100vh-140px)]">
       {/* 1. Integrated Search Bar at the Top */}
       <div className="relative p-2 pb-3">
         <div className="relative group">

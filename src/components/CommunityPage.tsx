@@ -14,7 +14,7 @@ export default function CommunityPage() {
   ];
 
   return (
-    <div className="pt-24 pb-32 px-4 max-w-lg mx-auto space-y-8">
+    <div className="pt-4 pb-32 px-4 max-w-lg mx-auto space-y-8">
       {/* Page Header */}
       <div className="flex items-center justify-between px-2">
         <div>

@@ -177,7 +177,7 @@ export default function UserOrdersPage({
   };
 
   return (
-    <div className="pt-24 pb-32 px-4 max-w-lg mx-auto">
+    <div className="pt-4 pb-32 px-4 max-w-lg mx-auto">
       <div className="flex items-center justify-between mb-6 px-2">
         <h2 className="serif-display text-2xl font-black text-primary">Your Orders</h2>
         <div className="flex items-center gap-2">

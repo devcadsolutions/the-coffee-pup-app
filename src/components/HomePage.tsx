@@ -89,7 +89,7 @@ export default function HomePage({ products, onOrderNow, onCategorySelect, onSel
   return (
     <div className="pb-32 bg-surface">
       {/* 1. Header Order Type Selection Toggle (Cotti App Signature Style) */}
-      <section className="pt-24 px-4 max-w-lg mx-auto">
+      <section className="pt-4 px-4 max-w-lg mx-auto">
         <div className="bg-white rounded-[2rem] p-4 shadow-sm border border-stone-100/80">
           <div className="flex bg-stone-50 p-1 rounded-2xl mb-4">
             <button
