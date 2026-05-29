@@ -530,7 +530,7 @@ export default function App() {
           <div className="p-8 border-t border-stone-50 text-center">
             <h4 className="font-black text-primary text-sm mb-4 uppercase tracking-widest">Scan to Pay</h4>
             <div className="bg-white p-6 rounded-[2rem] border-2 border-dashed border-stone-100 flex justify-center cursor-pointer group" onClick={() => setShowQr(true)}>
-              <QrCode size={160} className="text-primary group-hover:scale-105 transition-transform" />
+              <img src="/qr_code.jpg" alt="Payment QR Code" className="max-h-40 object-contain group-hover:scale-105 transition-transform" />
             </div>
             <p className="text-[10px] text-stone-400 mt-4 leading-relaxed">
               Please scan the QR code to complete your payment. <br/>Take a screenshot and send it to our Messenger.
@@ -563,7 +563,7 @@ export default function App() {
               onClick={e => e.stopPropagation()}
             >
               <div className="mb-6">
-                <QrCode size={200} className="text-primary mx-auto" />
+                <img src="/qr_code.jpg" alt="Payment QR Code" className="w-full max-h-64 object-contain mx-auto" />
               </div>
               <h3 className="font-serif text-2xl font-black text-primary mb-1">Janeane Paredes</h3>
               <p className="text-stone-400 text-xs font-black uppercase tracking-widest mb-8">GCash / Maya</p>
