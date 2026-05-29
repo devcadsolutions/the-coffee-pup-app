@@ -4,7 +4,7 @@ import { Trash2, Plus, Minus } from 'lucide-react';
 
 export default function CartPage({ cart, onCheckout, updateCartItemQuantity, removeFromCart }: { cart: CartItem[], onCheckout: () => void, updateCartItemQuantity: (itemId: string, delta: number) => void, removeFromCart: (itemId: string) => void }) {
   const getProduct = (id: string) => products.find(p => p.id === id);
-  const getVariantPrice = (product: Product, variantName: string) => product.variants.find(v => v.name === variantName)?.price || 0;
+  const getVariantPrice = (product: Product, variantName: string) => (product.variants || []).find(v => v.name === variantName)?.price || 0;
   
   // Group identical items
   const groupedCart = cart.reduce((acc, item) => {

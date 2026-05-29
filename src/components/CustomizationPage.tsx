@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { resolveProductImage } from '../utils/productImages';
 
 export default function CustomizationPage({ product, onAddToCart, onProceedToOrder, onCancel }: { product: Product, onAddToCart: (item: CartItem) => void, onProceedToOrder: (item: CartItem) => void, onCancel: () => void }) {
-  const [variant, setVariant] = useState(product.variants[0]);
+  const [variant, setVariant] = useState((product.variants || [])[0] || { name: 'Regular', price: 0 });
   const [selectedModifiers, setSelectedModifiers] = useState<{ groupId: string; option: ModifierOption }[]>([]);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -133,7 +133,7 @@ export default function CustomizationPage({ product, onAddToCart, onProceedToOrd
           <div className="space-y-3">
             <h3 className="font-black text-[10px] text-stone-400 uppercase tracking-wider">Choose Option</h3>
             <div className="flex flex-wrap gap-2">
-              {product.variants.map(v => {
+              {(product.variants || []).map(v => {
                 const isSelected = variant.name === v.name;
                 return (
                   <button 

@@ -34,7 +34,7 @@ export default function MenuPage({
                   <p className="text-on-surface-variant text-sm mt-1">{product.description}</p>
                 </div>
                 <span className="font-bold text-lg text-primary">
-                  {product.variants[0]?.price ? `PHP ${product.variants[0].price.toFixed(2)}` : 'Price varies'}
+                  {(product.variants || [])[0]?.price ? `PHP ${(product.variants || [])[0].price.toFixed(2)}` : 'Price varies'}
                 </span>
               </div>
               <button 

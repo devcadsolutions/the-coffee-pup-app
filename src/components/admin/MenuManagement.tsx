@@ -35,7 +35,7 @@ export default function MenuManagement() {
   const handleOpenEdit = (p: Product) => {
     setEditingProduct(p);
     setEditStatus((p.status as any) || 'active');
-    setEditVariants(p.variants.map(v => ({ name: v.name, price: v.price || 0 })));
+    setEditVariants((p.variants || []).map(v => ({ name: v.name, price: v.price || 0 })));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -90,7 +90,8 @@ export default function MenuManagement() {
             </thead>
             <tbody className="divide-y divide-stone-50">
               {products.map(item => {
-                const prices = item.variants.map(v => v.price).filter(p => p !== null) as number[];
+                const variants = item.variants || [];
+                const prices = variants.map(v => v.price).filter(p => p !== null) as number[];
                 const priceRange = prices.length > 0 
                   ? prices.length === 1 
                     ? `₱${prices[0].toFixed(2)}`

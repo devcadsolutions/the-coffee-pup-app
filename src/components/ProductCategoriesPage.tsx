@@ -39,7 +39,7 @@ export default function ProductCategoriesPage({
     if (selectedCategory === 'All') return true;
     if (selectedCategory === 'Signature') return p.isSignature;
     if (selectedCategory === 'Matcha') return p.name.toLowerCase().includes('matcha');
-    if (selectedCategory === 'Bottles') return p.variants.some(v => v.name.toLowerCase().includes('bottle'));
+    if (selectedCategory === 'Bottles') return (p.variants || []).some(v => v.name.toLowerCase().includes('bottle'));
     
     return p.category === selectedCategory;
   });
@@ -122,7 +122,9 @@ export default function ProductCategoriesPage({
             <AnimatePresence mode="popLayout">
               {filteredProducts.map((product) => {
                 const isUnavailable = product.status === 'unavailable';
-                const startingPrice = Math.min(...product.variants.filter(v => v.price !== null).map(v => v.price as number));
+                const variants = product.variants || [];
+                const prices = variants.filter(v => v.price !== null).map(v => v.price as number);
+                const startingPrice = prices.length > 0 ? Math.min(...prices) : 0;
 
                 return (
                   <motion.div 

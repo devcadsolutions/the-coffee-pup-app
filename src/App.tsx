@@ -297,7 +297,7 @@ export default function App() {
 
   const calculateTotal = () => {
     const getProduct = (id: string) => menuProducts.find(p => p.id === id);
-    const getVariantPrice = (product: Product, variantName: string) => product.variants.find(v => v.name === variantName)?.price || 0;
+    const getVariantPrice = (product: Product, variantName: string) => (product.variants || []).find(v => v.name === variantName)?.price || 0;
     
     return cart.reduce((sum, item) => {
       const product = getProduct(item.productId);
@@ -335,7 +335,7 @@ export default function App() {
         name: menuProducts.find(p => p.id === item.productId)?.name || 'Unknown',
         productId: item.productId,
         quantity: item.quantity,
-        price: (menuProducts.find(p => p.id === item.productId)?.variants.find(v => v.name === item.customizations.variantName)?.price || 0) + item.customizations.selectedModifiers.reduce((s, m) => s + m.option.price, 0),
+        price: ((menuProducts.find(p => p.id === item.productId)?.variants || []).find(v => v.name === item.customizations.variantName)?.price || 0) + item.customizations.selectedModifiers.reduce((s, m) => s + m.option.price, 0),
         customizations: item.customizations
       })),
       subtotal,

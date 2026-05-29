@@ -7,7 +7,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { resolveProductImage } from '../utils/productImages';
 
 const BestsellerCard = ({ product, onSelectProduct }: { product: Product, onSelectProduct: (product: Product) => void }) => {
-  const startingPrice = Math.min(...product.variants.filter(v => v.price !== null).map(v => v.price as number));
+  const variants = product.variants || [];
+  const prices = variants.filter(v => v.price !== null).map(v => v.price as number);
+  const startingPrice = prices.length > 0 ? Math.min(...prices) : 0;
   
   return (
     <motion.div 
