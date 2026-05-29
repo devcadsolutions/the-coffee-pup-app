@@ -21,7 +21,7 @@ export default function OrdersPage() {
 
     const q = query(collection(db, 'orders'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       
       // Client-side sort by date to avoid composite index limits
       ordersData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

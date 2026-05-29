@@ -23,7 +23,7 @@ import PromoManagement from './components/admin/PromoManagement';
 import { Product, CartItem, CheckoutDetails } from './types';
 import { products as initialProducts } from './data/mockData';
 import { QrCode, Download, ShoppingCart, Settings as SettingsIcon, Loader2, CheckCircle2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import AnnouncementModal from './components/AnnouncementModal';
 import UserOrdersPage from './components/UserOrdersPage';
 import { auth, onAuthStateChanged, db, doc, onSnapshot, updateDoc, setDoc, collection, query, where } from './lib/firebase';

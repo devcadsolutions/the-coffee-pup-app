@@ -17,7 +17,7 @@ export default function OrderHistoryView() {
       const ordersData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as any[];
       // Client-side sort by createdAt descending to avoid composite index limits
       ordersData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setOrders(ordersData);
