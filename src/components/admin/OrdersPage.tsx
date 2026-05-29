@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db, collection, onSnapshot, query, doc, updateDoc, deleteDoc } from '../../lib/firebase';
-import { Search, Eye, Trash2, Printer, ShoppingBag, ChevronRight } from 'lucide-react';
+import { Search, Eye, Trash2, Printer, ShoppingBag, ChevronRight, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { sendLocalNotification, requestNotificationPermission } from '../../lib/notifications';
 import { auth } from '../../lib/firebase';
@@ -10,9 +10,19 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All Status');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const isInitialLoad = useRef(true);
 
   const statuses = ['Pending', 'Preparing', 'Out for Delivery', 'Completed', 'Cancelled'];
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setRefreshTrigger(prev => prev + 1);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 800);
+  };
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -59,7 +69,7 @@ export default function OrdersPage() {
       isInitialLoad.current = false;
     });
     return unsubscribe;
-  }, [orders.length]);
+  }, [orders.length, refreshTrigger]);
 
   const filteredOrders = orders.filter(order => 
     (filterStatus === 'All Status' || order.status === filterStatus) &&
@@ -173,6 +183,15 @@ export default function OrdersPage() {
             <option>All Status</option>
             {statuses.map(s => <option key={s}>{s}</option>)}
           </select>
+          <button 
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="px-4 py-2.5 rounded-xl border border-surface-container-high bg-white hover:bg-stone-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 text-xs font-bold text-primary flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            Refresh
+          </button>
         </div>
       </div>
 
