@@ -67,11 +67,11 @@ service cloud.firestore {
     }
 
     function isNonNegative(field) {
-      return request.resource.data[field] is number && request.resource.data[field] >= 0;
+      return (request.resource.data[field] is int || request.resource.data[field] is float) && request.resource.data[field] >= 0;
     }
 
     function isPositive(field) {
-      return request.resource.data[field] is number && request.resource.data[field] > 0;
+      return (request.resource.data[field] is int || request.resource.data[field] is float) && request.resource.data[field] > 0;
     }
 
     function hasOnlyAllowedFields(fields) {
@@ -116,7 +116,7 @@ service cloud.firestore {
              data.items is list &&
              isPositive('subtotal') &&
              (!('discountCode' in data) || data.discountCode is string) &&
-             (!('discountAmount' in data) || data.discountAmount is number) &&
+             (!('discountAmount' in data) || data.discountAmount is int || data.discountAmount is float) &&
              isNonNegative('deliveryFee') &&
              isPositive('total') &&
              data.paymentMethod in ['gcash', 'maya'] &&
